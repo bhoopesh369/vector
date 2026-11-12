@@ -1,0 +1,9 @@
+.tools/
+.vendor/
+.cache/
+.venv/
+backups/
+recordings/
+build/
+__pycache__/
+.DS_Store
