@@ -7,6 +7,7 @@ export JAVA_HOME
 TOOLS="$ANDROID_SDK_ROOT/build-tools/35.0.0"
 PLATFORM="$ANDROID_SDK_ROOT/platforms/android-35/android.jar"
 OUT=build/android
+python3 -c 'import shutil; shutil.rmtree("build/android/classes", ignore_errors=True); shutil.rmtree("build/android/dex", ignore_errors=True)'
 mkdir -p "$OUT/classes" "$OUT/dex"
 "$JAVA_HOME/bin/javac" -source 8 -target 8 -bootclasspath "$PLATFORM:$TOOLS/core-lambda-stubs.jar" -d "$OUT/classes" android/src/com/vector/motion/*.java
 "$JAVA_HOME/bin/jar" cf "$OUT/classes.jar" -C "$OUT/classes" .

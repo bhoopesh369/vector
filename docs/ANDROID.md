@@ -1,3 +1,9 @@
+# Current app: v0.4 watch imports and sports redesign
+
+See [sports app usage, analytics definitions and validation](SPORTS-APP.md) for the current Home / Record / Sessions interface. The sections below document the original prototype and BLE protocol, which remains compatible.
+
+Version 0.4 adds **Watch recordings** for inventory, resumable Bluetooth download and verified import from the factory-based standalone recorder. See [watch firmware usage and verification status](WATCH.md). Wi-Fi transfer and microSD recording are not implemented. Existing minimal BLE firmware can still stream live samples but cannot provide saved watch sessions.
+
 # Vector Motion Android prototype
 
 Installed and connected on OnePlus 13R (Android 17). User confirmed live readings on 12 November 2026. The user exported a phone recording after a screen-off check. Inspection found 4,637 samples over 41.635 seconds at 111.35 Hz, no sequence gaps, and a largest adjacent sample interval of 10.024 ms. Phone power logs show the recording wake lock held across the session and a screen-off transition during it. This demonstrates continuity for this short USB-connected test; extended unplugged screen-off operation remains to be checked.

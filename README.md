@@ -1,6 +1,10 @@
 # Vector — sports sensor experiments
 
-First milestone: a USB motion demo for the Waveshare ESP32-S3-Touch-AMOLED-2.06. The watch displays acceleration and rotation and streams all six axes to the Mac. The Mac saves CSV. No SD card is needed for this bench test.
+Current Android app: a dark sports recorder with local session history, drill markers, full-resolution motion analytics, interactive charts, comparison and CSV/ZIP export. See [sports app usage and verification](docs/SPORTS-APP.md).
+
+The new factory-based watch firmware adds internal-flash recording and later Bluetooth download while keeping the normal launcher. See [standalone watch usage and current verification status](docs/WATCH.md). The USB and minimal BLE demos below are earlier firmware alternatives.
+
+The initial milestone is a USB motion demo for the Waveshare ESP32-S3-Touch-AMOLED-2.06. The watch displays acceleration and rotation and streams all six axes to the Mac. The Mac saves CSV. No SD card is needed for this bench test.
 
 ## Run
 
@@ -26,7 +30,7 @@ Configuration: ±16 g acceleration, ±1024 degrees/s rotation, nominal six-axis 
 
 This is a bench demo, not a lossless sports recorder. There is no IMU FIFO or hardware sample counter yet; timestamps and gaps expose some acquisition/transport delays but cannot prove that every hardware sample was read. Accel and gyro are read sequentially. Fast badminton swings may clip the gyro; its range and sample-rate choices need a separate sports-validation pass.
 
-USB capture requires the Mac to stay connected. No data is stored persistently on the watch. Powering the watch from its battery runs the display but does not save a session. Android BLE and SD-card recording are subsequent milestones.
+This earlier USB demo requires the Mac to stay connected and does not store data on the watch. Use the factory-based Motion Recorder firmware for standalone recording; microSD recording is not implemented.
 
 ## Build
 

@@ -4,149 +4,92 @@ import android.Manifest;
 import android.app.*;
 import android.content.*;
 import android.content.pm.PackageManager;
-import android.graphics.*;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 
+/** Navigation and activity lifecycle only; recording lives in RecorderService. */
 public class MainActivity extends Activity {
-    private RecorderService recorder;
-    private boolean bound;
-    private TextView status, values, stats;
-    private Button record, stop;
-    private MotionChart chart;
-    private File exportFile;
-    private long plotted=-1;
-    private final Handler ui=new Handler(Looper.getMainLooper());
-    private final ServiceConnection connection=new ServiceConnection() {
-        public void onServiceConnected(ComponentName name,IBinder binder) { recorder=((RecorderService.LocalBinder)binder).service(); }
-        public void onServiceDisconnected(ComponentName name) { recorder=null; }
+    public RecorderService recorder;
+    final Handler handler=new Handler(Looper.getMainLooper());
+    final ExecutorService io=Executors.newSingleThreadExecutor();
+    SessionStore store;List<SessionStore.Session> sessions=new ArrayList<>();
+    final LinkedHashSet<String> comparing=new LinkedHashSet<>();
+    int sportIndex,wristIndex,filterSport,filterDate;
+    Object screenObject;
+    private LinearLayout container,navigation;private ScrollView scroll;
+    private String tab="Home",restoreDetail="";private int generation;private boolean bound,destroyed;
+    private File exportFile;private boolean exportZip;private boolean wasRecording,watchPage;private String observedImport="";
+    private final ServiceConnection connection=new ServiceConnection(){
+        public void onServiceConnected(ComponentName name,IBinder binder){recorder=((RecorderService.LocalBinder)binder).service();update();}
+        public void onServiceDisconnected(ComponentName name){recorder=null;update();}
     };
-    @Override public void onCreate(Bundle saved) {
-        super.onCreate(saved);
-        if(saved!=null && saved.getString("export")!=null) exportFile=new File(saved.getString("export"));
-        LinearLayout page=new LinearLayout(this); page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(24,24,24,24); page.setBackgroundColor(Color.rgb(12,20,32));
-        page.setOnApplyWindowInsetsListener((v,insets)->{
-            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());
-            v.setPadding(24+bars.left,24+bars.top,24+bars.right,24+bars.bottom); return insets;
+    @Override public void onCreate(Bundle saved){super.onCreate(saved);getWindow().setStatusBarColor(SportUi.BG);getWindow().setNavigationBarColor(SportUi.BG);
+        if(saved!=null){tab=saved.getString("tab","Home");watchPage=saved.getBoolean("watchPage");sportIndex=saved.getInt("sport");wristIndex=saved.getInt("wrist");filterSport=saved.getInt("filterSport");filterDate=saved.getInt("filterDate");restoreDetail=saved.getString("detail","");
+            if(saved.getString("export")!=null)exportFile=new File(saved.getString("export"));exportZip=saved.getBoolean("exportZip");String[] selected=saved.getStringArray("compare");if(selected!=null)comparing.addAll(Arrays.asList(selected));}
+        store=new SessionStore(new File(getFilesDir(),"recordings"));
+        LinearLayout page=SportUi.column(this);page.setBackgroundColor(SportUi.BG);page.setOnApplyWindowInsetsListener((view,insets)->{
+            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());view.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;});setContentView(page);
+        LinearLayout brand=SportUi.row(this);brand.setPadding(SportUi.dp(this,22),SportUi.dp(this,10),SportUi.dp(this,22),SportUi.dp(this,6));page.addView(brand);
+        SportUi.text(brand,"V / VECTOR",16,SportUi.MINT).setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        scroll=new ScrollView(this);scroll.setFillViewport(true);page.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        container=SportUi.column(this);int pad=SportUi.dp(this,20);container.setPadding(pad,pad,pad,pad);scroll.addView(container);
+        navigation=SportUi.row(this);navigation.setPadding(8,8,8,8);page.addView(navigation,new LinearLayout.LayoutParams(-1,-2));
+        String pending=restoreDetail;boolean pendingWatch=watchPage;navigate(tab);restoreDetail=pending;if(pendingWatch)watchLibrary();permissions();
+    }
+    void navigate(String destination){watchPage=false;generation++;restoreDetail="";tab=destination;container.removeAllViews();scroll.scrollTo(0,0);
+        if("Record".equals(tab)){RecordScreen screen=new RecordScreen(this);screenObject=screen;container.addView(screen.root);}
+        else if("Sessions".equals(tab)){HistoryScreen screen=new HistoryScreen(this);screenObject=screen;container.addView(screen.root);}
+        else{HomeScreen screen=new HomeScreen(this);screenObject=screen;container.addView(screen.root);}
+        navigation.removeAllViews();for(String name:new String[]{"Home","Record","Sessions"}){
+            Button b=new Button(this);b.setAllCaps(false);b.setText(name);b.setTextSize(14);b.setTextColor(name.equals(tab)?SportUi.BG:SportUi.MUTED);b.setBackground(SportUi.background(name.equals(tab)?SportUi.MINT:SportUi.BG,SportUi.dp(this,14)));b.setTag("nav:"+name);b.setMinHeight(SportUi.dp(this,52));navigation.addView(b,new LinearLayout.LayoutParams(0,SportUi.dp(this,54),1));b.setOnClickListener(v->{navigate(name);if(!"Record".equals(name))refreshSessions();});
+        }
+    }
+    void refreshSessions(){if(destroyed)return;int request=++generation;io.execute(()->{List<SessionStore.Session> loaded=store.list();handler.post(()->{
+        if(destroyed||request!=generation)return;sessions=loaded;
+        if(!restoreDetail.isEmpty()){String wanted=restoreDetail;restoreDetail="";for(SessionStore.Session s:sessions)if(s.csv.getName().equals(wanted)){detail(s);return;}}
+        if(screenObject instanceof HomeScreen||screenObject instanceof HistoryScreen)navigate(tab);
+    });});}
+    void detail(SessionStore.Session session){int request=++generation;restoreDetail=session.csv.getName();container.removeAllViews();SportUi.heading(container,"Opening session…",24);screenObject=null;
+        io.execute(()->{try{List<MotionAnalytics.Sample> data=MotionAnalytics.read(session.csv);handler.post(()->{if(destroyed||request!=generation)return;AnalysisScreen screen=new AnalysisScreen(this,session,data);screenObject=screen;container.removeAllViews();container.addView(screen.root);scroll.scrollTo(0,0);});}
+            catch(Exception e){handler.post(()->{if(request!=generation)return;message("Could not open session: "+e.getMessage());navigate("Sessions");});}
         });
-        setContentView(page);
-        TextView title=text("VECTOR / MOTION",26); page.addView(title);
-        page.addView(text("Badminton • raw wrist motion",15));
-        status=text("Connect your watch to start",16); page.addView(status);
-        LinearLayout buttons=new LinearLayout(this); page.addView(buttons);
-        button(buttons,"Connect",()->command("CONNECT"));
-        button(buttons,"Disconnect",()->command("DISCONNECT"));
-        LinearLayout capture=new LinearLayout(this); page.addView(capture);
-        record=button(capture,"Record",()->command("RECORD"));
-        stop=button(capture,"Stop & save",()->command("STOP_RECORD"));
-        button(page,"Export saved CSV",this::chooseExport);
-        stats=text("No recording yet",14); page.addView(stats);
-        values=text("Acceleration (g)\nRotation (deg/s)",15); page.addView(values);
-        chart=new MotionChart(this); page.addView(chart,new LinearLayout.LayoutParams(-1,0,1));
-        page.addView(text("X coral   Y mint   Z blue\nLive graphs pause while hidden. CSV recording continues with the phone screen off.\nWatch has no SD recording yet; Bluetooth loss ends this session.",13));
-        permissions();
     }
-    private TextView text(String content,int size) {
-        TextView t=new TextView(this); t.setText(content); t.setTextColor(Color.rgb(226,235,246));
-        t.setTextSize(size); t.setPadding(0,8,0,8); return t;
+    void watchLibrary(){navigate("Sessions");watchPage=true;WatchScreen screen=new WatchScreen(this);screenObject=screen;container.removeAllViews();container.addView(screen.root);scroll.scrollTo(0,0);}
+    void compare(SessionStore.Session a,SessionStore.Session b){generation++;restoreDetail="";screenObject=null;container.removeAllViews();container.addView(AnalysisScreen.compare(this,a,b));scroll.scrollTo(0,0);}
+    private boolean permissions(){ArrayList<String> needed=new ArrayList<>();
+        for(String p:new String[]{Manifest.permission.BLUETOOTH_SCAN,Manifest.permission.BLUETOOTH_CONNECT})if(checkSelfPermission(p)!=PackageManager.PERMISSION_GRANTED)needed.add(p);
+        if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)needed.add(Manifest.permission.POST_NOTIFICATIONS);
+        if(!needed.isEmpty()){requestPermissions(needed.toArray(new String[0]),1);return false;}return true;
     }
-    private Button button(LinearLayout parent,String label,Runnable action) {
-        Button b=new Button(this); b.setText(label); parent.addView(b);
-        b.setOnClickListener(v->action.run()); return b;
+    void command(String action,Intent extras){if("CONNECT".equals(action)&&!permissions()){message("Allow Nearby devices and notifications, then connect");return;}
+        Intent intent=new Intent(this,RecorderService.class).setAction(action);if(extras!=null&&extras.getExtras()!=null)intent.putExtras(extras.getExtras());
+        try{if("CONNECT".equals(action))startForegroundService(intent);else startService(intent);}catch(RuntimeException e){message("Could not start: "+e.getMessage());}
+        if("MARKER".equals(action))message("Drill marker queued");
     }
-    private boolean permissions() {
-        ArrayList<String> needed=new ArrayList<>();
-        for(String p:new String[]{Manifest.permission.BLUETOOTH_SCAN,Manifest.permission.BLUETOOTH_CONNECT})
-            if(checkSelfPermission(p)!=PackageManager.PERMISSION_GRANTED) needed.add(p);
-        if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
-            needed.add(Manifest.permission.POST_NOTIFICATIONS);
-        if(!needed.isEmpty()) { requestPermissions(needed.toArray(new String[0]),1); return false; }
-        return true;
+    @Override protected void onStart(){super.onStart();bound=bindService(new Intent(this,RecorderService.class),connection,BIND_AUTO_CREATE);handler.post(tick);refreshSessions();}
+    @Override protected void onStop(){handler.removeCallbacks(tick);if(bound){unbindService(connection);bound=false;recorder=null;}super.onStop();}
+    @Override protected void onDestroy(){destroyed=true;generation++;handler.removeCallbacksAndMessages(null);io.shutdown();super.onDestroy();}
+    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("tab",tab);out.putBoolean("watchPage",watchPage);out.putInt("sport",sportIndex);out.putInt("wrist",wristIndex);out.putInt("filterSport",filterSport);out.putInt("filterDate",filterDate);out.putStringArray("compare",comparing.toArray(new String[0]));out.putString("detail",restoreDetail);
+        if(exportFile!=null)out.putString("export",exportFile.getPath());out.putBoolean("exportZip",exportZip);}
+    private final Runnable tick=new Runnable(){public void run(){update();handler.postDelayed(this,250);}};
+    private void update(){if(screenObject instanceof WatchScreen)((WatchScreen)screenObject).update();
+        if(recorder!=null&&!recorder.lastImported.equals(observedImport)){observedImport=recorder.lastImported;refreshSessions();}
+        if(screenObject instanceof RecordScreen)((RecordScreen)screenObject).update();if(screenObject instanceof HomeScreen)((HomeScreen)screenObject).update(recorder);
+        boolean recording=recorder!=null&&recorder.recording;if(wasRecording&&!recording)refreshSessions();wasRecording=recording;}
+    void message(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
+    void export(SessionStore.Session session,boolean zip){exportFile=session.csv;exportZip=zip;Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(zip?"application/zip":"text/csv")
+        .putExtra(Intent.EXTRA_TITLE,zip?session.csv.getName().replace(".csv",".zip"):session.csv.getName());startActivityForResult(intent,2);}
+    @Override protected void onActivityResult(int request,int result,Intent intent){super.onActivityResult(request,result,intent);if(request!=2||result!=RESULT_OK||intent==null||intent.getData()==null||exportFile==null)return;
+        File source=exportFile;boolean zip=exportZip;android.net.Uri destination=intent.getData();
+        io.execute(()->{try(OutputStream out=getContentResolver().openOutputStream(destination)){
+            if(out==null)throw new IOException("Could not open destination");if(new File(source.getPath()+".active").exists())throw new IOException("Stop recording before exporting");
+            if(zip){SessionStore.Session session=new SessionStore.Session(source);session.metadata=store.metadata(source);store.exportZip(session,out);}else try(InputStream in=new FileInputStream(source)){SessionStore.copy(in,out);}
+            handler.post(()->message(zip?"Session ZIP exported":"CSV exported"));
+        }catch(Exception e){handler.post(()->message("Export failed: "+e.getMessage()));}});
     }
-    private void command(String action) {
-        if("CONNECT".equals(action) && !permissions()) { status.setText("Allow Nearby devices and notifications, then tap Connect"); return; }
-        Intent i=new Intent(this,RecorderService.class).setAction(action);
-        try { if("CONNECT".equals(action)) startForegroundService(i); else startService(i); }
-        catch(RuntimeException e) { status.setText("Could not start: "+e.getMessage()); }
-    }
-    @Override protected void onStart() {
-        super.onStart(); bound=bindService(new Intent(this,RecorderService.class),connection,BIND_AUTO_CREATE); ui.post(refresh);
-    }
-    @Override protected void onStop() {
-        ui.removeCallbacks(refresh); if(bound) { unbindService(connection); bound=false; recorder=null; } super.onStop();
-    }
-    @Override protected void onSaveInstanceState(Bundle out) {
-        super.onSaveInstanceState(out); if(exportFile!=null) out.putString("export",exportFile.getAbsolutePath());
-    }
-    private final Runnable refresh=new Runnable() { public void run() {
-        if(recorder!=null) {
-            status.setText(recorder.status);
-            record.setEnabled(recorder.ready && !recorder.recording); stop.setEnabled(recorder.recording);
-            stats.setText((recorder.recording?"RECORDING • ":"Received in last recording • ")+String.format(Locale.US,"%.1f s • ",recorder.recordedSeconds)+recorder.count+" samples\n"+recorder.missing+" missing • "+recorder.clipped+" clipped");
-            MotionPacket sample=recorder.latest;
-            if(sample!=null && sample.micros!=plotted) {
-                if(sample.micros<plotted) chart.clear(); plotted=sample.micros; chart.add(sample.axes);
-                values.setText(String.format(Locale.US,"Acceleration (g)   %+.3f   %+.3f   %+.3f\nRotation (deg/s)   %+.1f   %+.1f   %+.1f", sample.axes[0],sample.axes[1],sample.axes[2],sample.axes[3],sample.axes[4],sample.axes[5]));
-            }
-        }
-        ui.postDelayed(this,200);
-    }};
-    private void chooseExport() {
-        File dir=new File(getFilesDir(),"recordings");
-        File[] files=dir.listFiles((d,name)->name.endsWith(".csv") && !new File(d,name+".active").exists());
-        if(files==null || files.length==0) { status.setText("Stop and save a recording before exporting"); return; }
-        Arrays.sort(files,(a,b)->b.getName().compareTo(a.getName()));
-        String[] names=new String[files.length]; for(int i=0;i<files.length;i++) names[i]=files[i].getName();
-        new AlertDialog.Builder(this).setTitle("Choose a recording").setItems(names,(dialog,index)->{
-            exportFile=files[index];
-            Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/csv").addCategory(Intent.CATEGORY_OPENABLE)
-                .putExtra(Intent.EXTRA_TITLE,exportFile.getName()); startActivityForResult(i,2);
-        }).show();
-    }
-    @Override protected void onActivityResult(int request,int result,Intent data) {
-        super.onActivityResult(request,result,data);
-        if(request==2 && result==RESULT_OK && data!=null && data.getData()!=null && exportFile!=null) {
-            File source=exportFile; android.net.Uri destination=data.getData();
-            new Thread(()->{
-                try(InputStream in=new FileInputStream(source); OutputStream out=getContentResolver().openOutputStream(destination)) {
-                    if(out==null) throw new IOException("Could not open destination");
-                    byte[] buffer=new byte[8192]; int n; while((n=in.read(buffer))!=-1) out.write(buffer,0,n);
-                    ui.post(()->Toast.makeText(this,"CSV exported",Toast.LENGTH_LONG).show());
-                } catch(IOException e) { ui.post(()->Toast.makeText(this,"Export failed: "+e.getMessage(),Toast.LENGTH_LONG).show()); }
-            }).start();
-        }
-    }
-    private static class MotionChart extends View {
-        final float[][] points=new float[160][6]; int size=0, head=0;
-        final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        final int[] colors={Color.rgb(255,130,115),Color.rgb(80,225,180),Color.rgb(90,165,255)};
-        MotionChart(Context c) { super(c); }
-        void clear(){size=0;head=0;}
-        void add(float[] values){System.arraycopy(values,0,points[head],0,6);head=(head+1)%points.length;size=Math.min(size+1,points.length);invalidate();}
-        @Override protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas); float w=getWidth(),h=getHeight()/2f;
-            if(h<30) return;
-            for(int panel=0;panel<2;panel++) {
-                p.setColor(Color.LTGRAY);p.setTextSize(28);p.setStrokeWidth(1);
-                canvas.drawText(panel==0?"Acceleration (g)":"Rotation (deg/s)",8,panel*h+30,p);
-                float scale=panel==0?2:150;
-                for(int i=0;i<size;i++) for(int axis=0;axis<3;axis++) scale=Math.max(scale,Math.abs(points[i][panel*3+axis])*1.15f);
-                p.setTextSize(22);canvas.drawText(String.format(Locale.US,"±%.1f",scale),w-110,panel*h+30,p);
-                float center=panel*h+h*.55f, span=h*.35f;
-                p.setColor(Color.DKGRAY);canvas.drawLine(0,center,w,center,p);
-                for(int axis=0;axis<3;axis++) {
-                    p.setColor(colors[axis]);p.setStrokeWidth(3);
-                    for(int i=1;i<size;i++) {
-                        int first=(head-size+i-1+points.length)%points.length, second=(first+1)%points.length;
-                        canvas.drawLine((i-1)*w/159,center-points[first][panel*3+axis]/scale*span,
-                            i*w/159,center-points[second][panel*3+axis]/scale*span,p);
-                    }
-                }
-            }
-        }
-    }
+    @Override public void onBackPressed(){if(screenObject instanceof AnalysisScreen||!"Home".equals(tab))navigate("Home");else super.onBackPressed();}
 }

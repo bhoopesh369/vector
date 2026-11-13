@@ -29,6 +29,14 @@ public class RecorderService extends Service {
     private boolean active, scanning;
     private long lastData, deadline, lastFlush;
     private MotionPacket previous;
+    private SessionStore sessions;
+    private WatchSync sync;
+    public volatile boolean syncAvailable,syncBusy;
+    public volatile String syncStatus="Connect the watch to see saved sessions", lastImported="";
+    public volatile List<WatchSync.Item> watchSessions=Collections.emptyList();
+    public volatile String currentSport="Badminton", currentWrist="Right";
+    private final ArrayDeque<MotionAnalytics.Sample> live=new ArrayDeque<>();
+    public List<MotionAnalytics.Sample> liveSnapshot(){synchronized(live){return new ArrayList<>(live);}}
     private final IBinder binder = new LocalBinder();
     public class LocalBinder extends Binder { public RecorderService service() { return RecorderService.this; } }
     @Override public IBinder onBind(Intent intent) { return binder; }
@@ -39,16 +47,8 @@ public class RecorderService extends Service {
         wake.setReferenceCounted(false);
         lastSaved = getSharedPreferences("session",0).getString("lastSaved", "");
         status = getSharedPreferences("session",0).getString("lastOutcome", status);
-        File dir = new File(getFilesDir(),"recordings"); dir.mkdirs();
-        // A crash or forced process stop leaves a durable marker rather than claiming a clean finish.
-        File[] pending = dir.listFiles((d,n)->n.endsWith(".active"));
-        if (pending != null) for(File marker:pending) {
-            try { try(FileWriter f=new FileWriter(new File(dir,marker.getName().replace(".active",".status.txt")))) {
-                f.write("Interrupted: app process ended; buffered samples may be missing.\n"); }
-                marker.delete(); status="Previous recording interrupted; saved CSV is available";
-                getSharedPreferences("session",0).edit().putString("lastOutcome",status).apply();
-            } catch(IOException ignored) { status="Previous recording interrupted; recovery marker retained"; }
-        }
+        sessions=new SessionStore(new File(getFilesDir(),"recordings"));
+        work.post(this::recoverSessions);
         work.postDelayed(watchdog,1000);
     }
     @Override public int onStartCommand(Intent intent,int flags,int id) {
@@ -63,7 +63,18 @@ public class RecorderService extends Service {
         work.post(()->{
             try {
                 if("CONNECT".equals(action)) connect();
-                else if("RECORD".equals(action)) beginRecording();
+                else if("RECORD".equals(action)) {
+                    currentSport=valid(intent.getStringExtra("sport"),new String[]{"Badminton","Tennis","Running","Other"},"Badminton");
+                    currentWrist=valid(intent.getStringExtra("wrist"),new String[]{"Left","Right"},"Right");
+                    beginRecording();
+                }
+                else if("MARKER".equals(action) && recording && count>0 && latest!=null) {
+                    String label=intent.getStringExtra("label");
+                    if(label!=null && !label.trim().isEmpty())sessions.marker(new File(sessions.directory,recordingName),label.trim(),latest.micros);
+                }
+                else if("WATCH_LIST".equals(action)) {if(sync!=null&&!recording)sync.list();}
+                else if("WATCH_GET".equals(action)) {if(sync!=null&&!recording)sync.download(intent.getStringExtra("id"));}
+                else if("CANCEL_SYNC".equals(action)) shutdown("Transfer cancelled; reconnect to resume");
                 else if("STOP_RECORD".equals(action)) finishRecording("Stopped by user");
                 else shutdown("Disconnected by user");
             } catch(Exception e) { shutdown("Error: "+e.getMessage()); }
@@ -86,6 +97,7 @@ public class RecorderService extends Service {
         BluetoothAdapter adapter=getSystemService(BluetoothManager.class).getAdapter();
         if(adapter==null || !adapter.isEnabled()) { shutdown("Turn on Bluetooth, then tap Connect"); return; }
         active=true; ready=false; latest=null; previous=null;
+        synchronized(live){live.clear();}
         scanner=adapter.getBluetoothLeScanner(); scanning=true; deadline=SystemClock.elapsedRealtime()+20000;
         update("Looking for Vector Motion…");
         scanner.startScan(Collections.singletonList(new ScanFilter.Builder().setServiceUuid(new ParcelUuid(SERVICE)).build()),
@@ -109,7 +121,7 @@ public class RecorderService extends Service {
         @Override public void onConnectionStateChange(BluetoothGatt g,int result,int state) { work.post(()->{
             if(g!=gatt || !active) return;
             if(result!=BluetoothGatt.GATT_SUCCESS || state==BluetoothProfile.STATE_DISCONNECTED) {
-                shutdown("Interrupted: Bluetooth disconnected ("+result+")"); return;
+                shutdown("Interrupted: watch connection lost"); return;
             }
             if(state==BluetoothProfile.STATE_CONNECTED) {
                 g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
@@ -123,6 +135,15 @@ public class RecorderService extends Service {
         @Override public void onServicesDiscovered(BluetoothGatt g,int result) { work.post(()->{
             if(g!=gatt || !active) return;
             BluetoothGattService service=g.getService(SERVICE);
+            if(service!=null){
+                sync=new WatchSync(g,service,work,sessions,(available,busy,text,items,imported)->{
+                    boolean wasBusy=syncBusy;syncAvailable=available;syncBusy=busy;if(wasBusy&&!busy)lastData=SystemClock.elapsedRealtime();syncStatus=text;watchSessions=items;
+                    if(!imported.isEmpty())lastImported=imported;
+                    if(busy&&!wake.isHeld())wake.acquire();else if(!busy&&!recording&&wake.isHeld())wake.release();
+                    if(active&&busy)getSystemService(NotificationManager.class).notify(1,notification(text));
+                    else if(active&&!recording)getSystemService(NotificationManager.class).notify(1,notification(status));
+                });
+            }
             BluetoothGattCharacteristic data=service==null?null:service.getCharacteristic(DATA);
             BluetoothGattDescriptor descriptor=data==null?null:data.getDescriptor(CCC);
             if(result!=0 || descriptor==null || !g.setCharacteristicNotification(data,true)) { shutdown("Watch motion service unavailable"); return; }
@@ -131,8 +152,10 @@ public class RecorderService extends Service {
         }); }
         @Override public void onDescriptorWrite(BluetoothGatt g,BluetoothGattDescriptor d,int result) { work.post(()->{
             if(g!=gatt || !active) return;
+            if(WatchSync.FILE.equals(d.getCharacteristic().getUuid())){if(sync!=null)sync.subscribed(result);return;}
             if(result!=0) { shutdown("Motion subscription failed"); return; }
             lastData=SystemClock.elapsedRealtime(); update("Waiting for first motion sample…");
+            if(sync!=null&&sync.supported()&&!sync.subscribe())syncStatus="Watch transfer subscription could not start";
         }); }
         @Override public void onCharacteristicChanged(BluetoothGatt g,BluetoothGattCharacteristic c) {
             enqueueNotification(g,c,c.getValue()); // Android 12/12L callback.
@@ -140,9 +163,13 @@ public class RecorderService extends Service {
         @Override public void onCharacteristicChanged(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value) {
             enqueueNotification(g,c,value); // Android 13+ callback.
         }
+        @Override public void onCharacteristicWrite(BluetoothGatt g,BluetoothGattCharacteristic c,int result){work.post(()->{if(g==gatt&&active&&sync!=null&&WatchSync.CONTROL.equals(c.getUuid()))sync.wrote(result);});}
+        @Override public void onCharacteristicRead(BluetoothGatt g,BluetoothGattCharacteristic c,int result){enqueueRead(g,c,c.getValue(),result);}
+        @Override public void onCharacteristicRead(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value,int result){enqueueRead(g,c,value,result);}
+        private void enqueueRead(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value,int result){byte[] copy=value==null?new byte[0]:value.clone();work.post(()->{if(g==gatt&&active&&sync!=null&&WatchSync.CONTROL.equals(c.getUuid()))sync.read(copy,result);});}
         private void enqueueNotification(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value) {
             if(value==null) return;
-            byte[] copy=value.clone(); work.post(()->{ if(g==gatt && active && DATA.equals(c.getUuid())) receive(copy); });
+            byte[] copy=value.clone(); work.post(()->{if(g!=gatt||!active)return;if(DATA.equals(c.getUuid()))receive(copy);else if(WatchSync.FILE.equals(c.getUuid())&&sync!=null)sync.chunk(copy);});
         }
     };
     private void receive(byte[] bytes) {
@@ -150,12 +177,13 @@ public class RecorderService extends Service {
             MotionPacket sample=new MotionPacket(bytes);
             long gap=previous==null?0:MotionPacket.gap(previous.sequence,previous.micros,sample);
             previous=sample; latest=sample; lastData=SystemClock.elapsedRealtime();
+            synchronized(live){live.addLast(MotionAnalytics.Sample.from(sample));while(live.size()>1200)live.removeFirst();}
             if(!ready) { ready=true; update("Connected • live motion"); }
             if(recording) {
                 writer.write(sample.csv());
                 if(count==0) recordingFirstUs=sample.micros;
                 recordedSeconds=(sample.micros-recordingFirstUs)/1e6;
-                count++; missing+=gap; clipped+=sample.clipped;
+                if(count>0) missing+=gap; count++; clipped+=sample.clipped;
                 if(lastData-lastFlush>=1000) {
                     writer.flush(); lastFlush=lastData;
                     update(String.format(Locale.US,"Recording • %.1f s • %,d samples saved",recordedSeconds,count));
@@ -164,37 +192,41 @@ public class RecorderService extends Service {
         } catch(Exception e) { shutdown("Interrupted: "+e.getMessage()); }
     }
     private void beginRecording() throws IOException {
-        if(!ready || recording) return;
-        recordingName="badminton-"+Instant.now().toString().replace(':','-')+".csv";
+        if(!ready || recording || syncBusy) return;
+        recordingName=currentSport.toLowerCase(Locale.US)+"-"+Instant.now().toString().replace(':','-')+".csv";
         File f=new File(new File(getFilesDir(),"recordings"),recordingName);
         if(!f.createNewFile()) throw new IOException("Recording filename already exists");
         writer=new BufferedWriter(new FileWriter(f));
         writer.write(MotionPacket.HEADER+"\n"); writer.flush();
         new File(f.getPath()+".active").createNewFile();
+        sessions.create(f,currentSport,currentWrist);
         count=missing=clipped=0; recordedSeconds=0; lastFlush=SystemClock.elapsedRealtime();
-        recording=true; wake.acquire(); update("Recording badminton • screen may be turned off");
+        recording=true; wake.acquire(); update("Recording "+currentSport+" • screen may be turned off");
     }
     private void finishRecording(String reason) {
         if(writer==null) return;
-        recording=false;
         try { writer.close(); } catch(IOException e) { reason+="; file close error: "+e.getMessage(); }
         writer=null;
-        if(wake.isHeld()) wake.release();
         File f=new File(new File(getFilesDir(),"recordings"),recordingName);
         boolean summarySaved=false;
         try(FileWriter summary=new FileWriter(f.getPath()+".status.txt")) {
             summary.write(reason+"\nDurationSeconds="+recordedSeconds+"\nSamples="+count+"\nMissing="+missing+"\nClipped="+clipped+"\n"); summarySaved=true;
         } catch(IOException e) { reason+="; could not save summary"; }
+        try { sessions.finish(f,reason,count,missing,clipped,recordedSeconds); }
+        catch(IOException e) { summarySaved=false; reason+="; could not save session metadata"; }
         if(summarySaved) new File(f.getPath()+".active").delete();
         lastSaved=recordingName;
         String outcome=reason+" • saved "+count+" samples";
         getSharedPreferences("session",0).edit().putString("lastSaved",lastSaved).putString("lastOutcome",outcome).apply();
+        recording=false;
+        if(wake.isHeld()) wake.release();
         update(outcome);
     }
     private void shutdown(String reason) {
         boolean endedRecording=writer!=null;
         finishRecording(reason);
         active=false; ready=false;
+        if(sync!=null){sync.close();sync=null;}syncAvailable=false;syncBusy=false;
         try { stopScan(); } catch(RuntimeException ignored) { scanning=false; }
         if(gatt!=null) { BluetoothGatt old=gatt; gatt=null; try { old.disconnect(); old.close(); } catch(RuntimeException ignored) {} }
         if(wake.isHeld()) wake.release();
@@ -212,10 +244,14 @@ public class RecorderService extends Service {
         if(active) {
             long now=SystemClock.elapsedRealtime();
             if(!ready && now>deadline) shutdown("Connection timed out • keep watch nearby and try again");
-            else if(ready && now-lastData>5000) shutdown("Interrupted: no motion data for five seconds");
+            else if(ready && !syncBusy && now-lastData>5000) shutdown("Interrupted: no motion data for five seconds");
         }
         work.postDelayed(this,1000);
     }};
+    private static String valid(String value,String[] allowed,String fallback){for(String item:allowed)if(item.equals(value))return item;return fallback;}
+    private void recoverSessions() {
+        try{sessions.recoverInterrupted();}catch(IOException e){status="Interrupted session recovery needs attention: "+e.getMessage();}
+    }
     @Override public void onDestroy() {
         work.post(()->{ shutdown("Service ended"); work.removeCallbacksAndMessages(null); thread.quitSafely(); });
         super.onDestroy();

@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.vector.motion.tests" android:versionCode="1" android:versionName="1">
+ <uses-sdk android:minSdkVersion="31" android:targetSdkVersion="35"/>
+ <application android:label="Vector device checks" />
+ <instrumentation android:name=".DeviceChecks" android:targetPackage="com.vector.motion" android:label="Vector device checks" />
+</manifest>

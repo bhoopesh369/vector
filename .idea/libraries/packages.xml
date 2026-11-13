@@ -1,0 +1,19 @@
+<component name="libraryTable">
+  <library name="packages">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32p4_es-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32c6-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32-core-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32h2-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32s3-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32p4-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/ctags-5.8-arduino11-pm-x86_64-apple-darwin.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32c3-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32c5-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32s2-libs-3.3.11.zip!/" />
+      <root url="jar://$PROJECT_DIR$/.cache/arduino-downloads/packages/esp32-libs-3.3.11.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
