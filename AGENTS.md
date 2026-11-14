@@ -7,3 +7,6 @@ These instructions apply to `/Users/titan/vector` only.
 - Keep installed tools, downloaded libraries, packages, caches and Python environments inside this repository (for example `.tools`, `.vendor`, `.cache`, `.venv`).
 - Do not install, upgrade, remove or reconfigure global/system packages, libraries, SDKs, shell profiles or other laptop-wide settings. Existing system tools and SDKs may be used without modifying them.
 - Use conventional commit messages. Exclude recordings, device backups, signing keys and generated build/tool files from commits.
+- Work and push on `main` by default for every user request. Do not create a feature branch unless the user explicitly requests one.
+- For Vector Motion development, device checks, sensor questions or releases, read [.agents/skills/vector-motion-development/SKILL.md](.agents/skills/vector-motion-development/SKILL.md).
+- On this laptop, the ignored `.tools/push-main.sh` helper reads the user-provided token file without changing global Git settings. See the skill for usage and fallback.
