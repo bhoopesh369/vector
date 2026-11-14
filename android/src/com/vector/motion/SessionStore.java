@@ -49,6 +49,17 @@ public final class SessionStore {
             atomicJson(sidecar(csv,".session.json"),m);
         }catch(JSONException e){throw new IOException(e);}}
     }
+    public void setEpochStart(File csv,long epochUs,String clockSource) throws IOException {
+        synchronized(LOCK) {
+            JSONObject m=metadata(csv);
+            try {
+                m.put("startedUtc",Instant.ofEpochSecond(epochUs/1_000_000,epochUs%1_000_000*1000).toString())
+                    .put("timestampUnit","unix_microseconds").put("timeZone","Asia/Kolkata")
+                    .put("clockSource",clockSource);
+                atomicJson(sidecar(csv,".session.json"),m);
+            } catch(JSONException e) { throw new IOException(e); }
+        }
+    }
     public void marker(File csv,String label,long micros) throws IOException {
         synchronized(LOCK){JSONObject m=metadata(csv);try{
             JSONArray a=m.optJSONArray("markers");if(a==null)a=new JSONArray();
@@ -108,9 +119,7 @@ public final class SessionStore {
             if(saved.getInt("analyticsVersion")==MotionAnalytics.VERSION && saved.getLong("sourceBytes")==csv.length()
                 && saved.getLong("sourceModified")==csv.lastModified())return statsFromJson(saved.getJSONObject("summary"));
         }catch(Exception ignored){} // Derived cache is disposable; raw data is authoritative.
-        MotionAnalytics.Stats stats;
-        try {stats=MotionAnalytics.calculate(MotionAnalytics.read(csv),Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY);}
-        catch(IllegalArgumentException e){throw new IOException(e.getMessage(),e);}
+        MotionAnalytics.Stats stats=MotionAnalytics.summarize(csv);
         try{atomicJson(cache,new JSONObject().put("analyticsVersion",MotionAnalytics.VERSION).put("sourceBytes",csv.length())
             .put("sourceModified",csv.lastModified()).put("summary",statsJson(stats)));}
         catch(IOException|JSONException ignored){} // A cache write failure must not hide a readable session.
@@ -139,6 +148,9 @@ public final class SessionStore {
                     .put("qualityFinalized",header.qualityFinalized).put("fifoOverflows",header.fifoOverflows).put("sensorReadErrors",header.readErrors).put("queueDroppedSamples",header.queueDropped).put("nominalSensorHz",header.nominalHz).put("timestampMode",header.timingMode==1?"FIFO reconstructed within batches; host-anchored gaps":"host_read_time").put("source","watch").put("watchSessionId",id).put("watchCrc",crc).put("watchBytes",bytes)
                     .put("startedUtc",header.startedUnix>1577836800L&&header.startedUnix<4102444800L?Instant.ofEpochSecond(header.startedUnix).toString():Instant.now().toString())
                     .put("notes",header.startedUnix>1577836800L?"Imported from watch internal flash.":"Imported from watch. Watch clock was not set; displayed date is import time.");
+                m.put("timestampUnit",header.hasClock()?"unix_microseconds":"boot_relative_microseconds")
+                    .put("timeZone","Asia/Kolkata");
+                if(header.hasClock())m.put("clockSource","watch_session_clock_seconds");
                 atomicJson(sidecar(target,".session.json"),m);
                 Files.move(staged.toPath(),target.toPath());return target;
             }catch(JSONException e){throw new IOException(e);}finally{staged.delete();}

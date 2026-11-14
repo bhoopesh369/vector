@@ -1,3 +1,13 @@
+# v0.7 recording and display
+
+Start in **Record → Connect watch → Start recording** for a full-rate session. The phone writes the CSV into its own storage. Leave the watch's standalone recorder idle for a phone-only session. At about 1,175 samples/s, budget roughly 350–400 MB of phone space per hour for the CSV, plus room for any export.
+
+New phone CSVs use Unix microseconds in `t_us`. The phone anchors the first BLE packet to its wall clock at receipt and uses the watch's sample intervals for the rest of the session. Absolute times include Bluetooth delivery latency. Newly imported watch archives with a valid clock use their saved start time, which has one-second resolution. Sessions display Asia/Kolkata time. Existing CSVs retain their original timestamps.
+
+**Dim display** blanks the app and requests minimum brightness. Tap anywhere to restore it. Use the phone power button to switch the panel off completely or wake it. Capture runs in the foreground service in both cases.
+
+The phone computes whole-session statistics from every saved row using bounded memory. Sessions above 250,000 rows offer whole-session statistics and raw CSV or ZIP export. Export those sessions for interactive charts.
+
 # Current app: v0.6 full-rate mobile recording
 
 See [sports app usage, analytics definitions and validation](SPORTS-APP.md) for the current Home / Record / Sessions interface. The sections below document the original prototype and BLE protocol, which remains compatible.

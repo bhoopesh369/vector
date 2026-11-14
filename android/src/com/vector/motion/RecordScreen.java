@@ -29,11 +29,12 @@ final class RecordScreen {
         });record.setTag("record");
         marker=SportUi.button(session,"+ Add drill marker",false,this::marker);marker.setTag("marker");
         stop=SportUi.button(session,"Stop & save session",false,()->{host.command("STOP_RECORD",null);host.handler.postDelayed(()->host.refreshSessions(),500);});stop.setTag("stop-record");
+        SportUi.button(session,"Dim display",false,host::dimDisplay).setTag("dim-display");
         quality=SportUi.text(session,"Waiting for sensor data",13,SportUi.MUTED);
         SportUi.caption(root,"Live preview · X coral / Y mint / Z blue");
         LinearLayout a=SportUi.card(root);SportUi.heading(a,"Acceleration",18);SportUi.caption(a,"Includes gravity · g");acceleration=new MotionChartView(host,0);acceleration.setInteractive(false);a.addView(acceleration,new LinearLayout.LayoutParams(-1,SportUi.dp(host,190)));
         LinearLayout g=SportUi.card(root);SportUi.heading(g,"Angular velocity",18);SportUi.caption(g,"Sensor axes · deg/s");rotation=new MotionChartView(host,3);rotation.setInteractive(false);g.addView(rotation,new LinearLayout.LayoutParams(-1,SportUi.dp(host,190)));
-        SportUi.caption(root,"Graphs pause while hidden. Phone recording continues with the screen off. Keep the watch nearby; Bluetooth loss ends this session. Updated watches stream full-rate samples directly to the phone. Watch-only recording remains available.");update();
+        SportUi.caption(root,"Keep the phone nearby. Bluetooth loss ends the session. Press the phone power button to switch the screen off. Start recording here to save on the phone.");update();
     }
     private android.widget.AdapterView.OnItemSelectedListener selection(Runnable changed){return new AdapterView.OnItemSelectedListener(){public void onItemSelected(AdapterView<?> p,android.view.View v,int pos,long id){changed.run();}public void onNothingSelected(AdapterView<?> p){}};}
     void update(){RecorderService r=host.recorder;boolean ready=r!=null&&r.ready,recording=r!=null&&r.recording;
@@ -43,7 +44,7 @@ final class RecordScreen {
         connect.setText(ready?"Disconnect watch":"Connect watch");record.setEnabled(ready&&!recording&&!r.syncBusy);record.setAlpha(record.isEnabled()?1f:.4f);stop.setEnabled(recording);marker.setEnabled(recording&&r.count>0);sport.setEnabled(!recording);wrist.setEnabled(!recording);
         for(android.view.View view:setupViews)view.setVisibility(recording?android.view.View.GONE:android.view.View.VISIBLE);
         record.setVisibility(recording?android.view.View.GONE:android.view.View.VISIBLE);stop.setVisibility(recording?android.view.View.VISIBLE:android.view.View.GONE);marker.setVisibility(recording?android.view.View.VISIBLE:android.view.View.GONE);
-        configuration.setText(r!=null&&r.fullRate?"Full-rate Bluetooth recording · charts use a reduced preview":r!=null&&r.latest!=null&&r.latest.preview?"Reduced-rate preview. Record on the watch for full-rate data.":recording?r.currentSport+" · "+r.currentWrist+" wrist · recording on phone":"Choose sport and wrist before starting");
+        configuration.setText(r!=null&&r.fullRate?"Full-rate Bluetooth · saved on this phone":r!=null&&r.latest!=null&&r.latest.preview?"Reduced-rate preview. Record on the watch for full-rate data.":recording?r.currentSport+" · "+r.currentWrist+" wrist · recording on phone":"Choose sport and wrist before starting");
         quality.setText(r==null?"Waiting for sensor data":String.format(Locale.US,"%,d missing sequences   ·   %,d clipped samples",r.missing,r.clipped));
         if(recording){sport.setSelection(Arrays.asList("Badminton","Tennis","Running","Other").indexOf(r.currentSport));wrist.setSelection("Left".equals(r.currentWrist)?1:0);}
         if(r!=null&&r.latest!=null&&r.latest.micros!=drawnMicros){drawnMicros=r.latest.micros;List<MotionAnalytics.Sample> data=r.liveSnapshot();acceleration.setData(data);rotation.setData(data);}

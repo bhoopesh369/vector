@@ -17,6 +17,17 @@ final class AnalysisScreen {
         if(session.metadata.has("nominalSensorHz"))SportUi.caption(root,"Sensor configured: "+session.metadata.optDouble("nominalSensorHz")+" Hz. "+session.metadata.optString("timestampMode"));
         if(session.metadata.optBoolean("qualityFinalized"))SportUi.caption(root,"FIFO overflows: "+session.metadata.optInt("fifoOverflows")+" · sensor read errors: "+session.metadata.optInt("sensorReadErrors")+" · queue drops: "+session.metadata.optInt("queueDroppedSamples"));
         summary=SportUi.column(host);root.addView(summary);
+        if(data==null) {
+            rangeText=null;
+            from=to=null;
+            acceleration=rotation=null;
+            axesStats=SportUi.card(root);
+            renderStats(session.stats);
+            SportUi.caption(root,"For interactive charts of this long session, export its full CSV.");
+            SportUi.button(root,"Export CSV",false,()->host.export(session,false));
+            SportUi.button(root,"Export session ZIP",true,()->host.export(session,true));
+            return;
+        }
         LinearLayout ranges=SportUi.card(root);SportUi.heading(ranges,"Explore a time range",18);rangeText=SportUi.text(ranges,"Whole session",14,SportUi.MINT);rangeText.setTag("analysis-range");
         SportUi.caption(ranges,"Start");from=new SeekBar(host);from.setMax(1000);from.setTag("range-start");ranges.addView(from);
         SportUi.caption(ranges,"End");to=new SeekBar(host);to.setMax(1000);to.setTag("range-end");to.setProgress(1000);ranges.addView(to);
@@ -38,7 +49,7 @@ final class AnalysisScreen {
         rangeText.setText(String.format(Locale.US,"%.2f s → %.2f s",start,end));acceleration.range(start,end);rotation.range(start,end);
         int task=++generation;host.io.execute(()->{try{MotionAnalytics.Stats result=MotionAnalytics.calculate(data,start,end);host.handler.post(()->{if(task==generation && host.screenObject==this)renderStats(result);});}catch(Exception e){host.handler.post(()->host.message(e.getMessage()));}});
     }
-    private void renderStats(MotionAnalytics.Stats s){summary.removeAllViews();axesStats.removeAllViews();SportUi.heading(summary,"Selected motion",21);
+    private void renderStats(MotionAnalytics.Stats s){summary.removeAllViews();axesStats.removeAllViews();SportUi.heading(summary,data==null?"Whole session":"Selected motion",21);
         if(s.count==0){SportUi.caption(summary,"No samples in this range.");return;}
         SportUi.metric(summary,"PEAK ACCELERATION",SportUi.number(s.peakAcceleration),"g · vector magnitude, including gravity");
         SportUi.metric(summary,"PEAK ANGULAR SPEED",SportUi.number(s.peakRotation),"deg/s · vector magnitude");

@@ -21,7 +21,7 @@ public class RecorderService extends Service {
     private UUID motionCharacteristic=DATA;private int negotiatedMtu;private long lastChartUs;
     public volatile long count, missing, clipped;
     public volatile double recordedSeconds;
-    private long recordingFirstUs;
+    private long recordingFirstUs, recordingEpochUs;
     private HandlerThread thread;
     private Handler work;
     private BluetoothGatt gatt;
@@ -72,7 +72,7 @@ public class RecorderService extends Service {
                 }
                 else if("MARKER".equals(action) && recording && count>0 && latest!=null) {
                     String label=intent.getStringExtra("label");
-                    if(label!=null && !label.trim().isEmpty())sessions.marker(new File(sessions.directory,recordingName),label.trim(),latest.micros);
+                    if(label!=null && !label.trim().isEmpty())sessions.marker(new File(sessions.directory,recordingName),label.trim(),recordingEpochUs+(latest.micros-recordingFirstUs));
                 }
                 else if("WATCH_LIST".equals(action)) {if(sync!=null&&!recording)sync.list();}
                 else if("WATCH_GET".equals(action)) {if(sync!=null&&!recording)sync.download(intent.getStringExtra("id"));}
@@ -174,28 +174,34 @@ public class RecorderService extends Service {
         private void enqueueRead(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value,int result){byte[] copy=value==null?new byte[0]:value.clone();work.post(()->{if(g==gatt&&active&&sync!=null&&WatchSync.CONTROL.equals(c.getUuid()))sync.read(copy,result);});}
         private void enqueueNotification(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value) {
             if(value==null) return;
-            byte[] copy=value.clone(); work.post(()->{if(g!=gatt||!active)return;if(BATCH.equals(c.getUuid()))receiveBatch(copy);else if(DATA.equals(c.getUuid()))receive(copy);else if(WatchSync.FILE.equals(c.getUuid())&&sync!=null)sync.chunk(copy);});
+            long receivedEpochUs=System.currentTimeMillis()*1000L;
+            byte[] copy=value.clone(); work.post(()->{if(g!=gatt||!active)return;if(BATCH.equals(c.getUuid()))receiveBatch(copy,receivedEpochUs);else if(DATA.equals(c.getUuid()))receive(copy,receivedEpochUs);else if(WatchSync.FILE.equals(c.getUuid())&&sync!=null)sync.chunk(copy);});
         }
     };
-    private void receive(byte[] bytes) {
+    private void receive(byte[] bytes,long receivedEpochUs) {
         try {
             MotionPacket sample=new MotionPacket(bytes);
-            receiveSample(sample);
+            receiveSample(sample,receivedEpochUs,sample.micros);
         } catch(Exception e) { shutdown("Interrupted: "+e.getMessage()); }
     }
-    private void receiveBatch(byte[] bytes) {
-        try {MotionBatch batch=new MotionBatch(bytes);if(batch.hasLoss()){shutdown("Interrupted: full-rate Bluetooth queue overflow; reconnect");return;}for(MotionPacket sample:batch.frames)receiveSample(sample);}
+    private void receiveBatch(byte[] bytes,long receivedEpochUs) {
+        try {MotionBatch batch=new MotionBatch(bytes);if(batch.hasLoss()){shutdown("Interrupted: full-rate Bluetooth queue overflow; reconnect");return;}long packetLastUs=batch.frames[batch.frames.length-1].micros;for(MotionPacket sample:batch.frames)receiveSample(sample,receivedEpochUs,packetLastUs);}
         catch(Exception e){shutdown("Interrupted: "+e.getMessage());}
     }
-    private void receiveSample(MotionPacket sample)throws IOException {
+    private void receiveSample(MotionPacket sample,long receivedEpochUs,long packetLastUs)throws IOException {
             long gap=previous==null?0:MotionPacket.gap(previous.sequence,previous.micros,sample);
             if(fullRate&&recording&&count>0&&gap>0){missing+=gap;throw new IOException("Full-rate Bluetooth lost "+gap+" samples; reconnect");}
             previous=sample; latest=sample; lastData=SystemClock.elapsedRealtime();
             if(sample.micros-lastChartUs>=10000){lastChartUs=sample.micros;synchronized(live){live.addLast(MotionAnalytics.Sample.from(sample));while(live.size()>1200)live.removeFirst();}}
             if(!ready) { ready=true; update(fullRate?"Connected • full-rate motion":"Connected • live motion"); }
             if(recording) {
-                writer.write(sample.csv());
-                if(count==0) recordingFirstUs=sample.micros;
+                if(count==0) {
+                    recordingFirstUs=sample.micros;
+                    recordingEpochUs=receivedEpochUs+(sample.micros-packetLastUs);
+                    sessions.setEpochStart(new File(sessions.directory,recordingName),recordingEpochUs,
+                        "phone_ble_receive_estimate");
+                }
+                writer.write(sample.csv(recordingEpochUs+(sample.micros-recordingFirstUs)));
                 recordedSeconds=(sample.micros-recordingFirstUs)/1e6;
                 if(count>0) missing+=gap; count++; clipped+=sample.clipped;
                 if(lastData-lastFlush>=1000) {

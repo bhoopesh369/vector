@@ -18,8 +18,10 @@ public final class MotionPacket {
         if (micros < 0) throw new IllegalArgumentException("Invalid timestamp");
         for (int i=0; i<6; i++) axes[i] = b.getShort(14+2*i) / (i<3 ? 1000f : 16f);
     }
-    public String csv() {
-        StringBuilder out=new StringBuilder(100);out.append(sequence).append(',').append(micros);
+    public String csv() { return csv(micros); }
+
+    public String csv(long timestampUs) {
+        StringBuilder out=new StringBuilder(100);out.append(sequence).append(',').append(timestampUs);
         for(int i=0;i<6;i++){
             out.append(',');int raw=Math.round(axes[i]*(i<3?1000:16));
             if(raw<0){out.append('-');raw=-raw;}

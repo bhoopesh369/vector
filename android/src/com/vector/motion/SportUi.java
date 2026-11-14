@@ -25,5 +25,5 @@ final class SportUi {
     static String duration(double s){return String.format(Locale.US,"%02d:%02d",(long)s/60,(long)s%60);}
     static String number(double v){return String.format(Locale.US,"%.2f",v);}
     static void metric(LinearLayout parent,String label,String value,String unit){LinearLayout c=card(parent);caption(c,label);heading(c,value,30);caption(c,unit);}
-    static String date(SessionStore.Session s){String utc=s.metadata.optString("startedUtc","");try{return java.time.Instant.parse(utc).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM · HH:mm"));}catch(Exception e){return "Saved "+java.time.Instant.ofEpochMilli(s.csv.lastModified()).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM · HH:mm"));}}
+    static String date(SessionStore.Session s){String utc=s.metadata.optString("startedUtc","");try{return java.time.Instant.parse(utc).atZone(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM · HH:mm 'IST'"));}catch(Exception e){return "Saved "+java.time.Instant.ofEpochMilli(s.csv.lastModified()).atZone(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM · HH:mm 'IST'"));}}
 }

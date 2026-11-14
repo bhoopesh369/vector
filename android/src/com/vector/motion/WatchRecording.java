@@ -20,6 +20,7 @@ public final class WatchRecording {
             timingMode=bytes[14]&255;qualityFinalized=bytes[15]==1;fifoOverflows=Short.toUnsignedInt(b.getShort(58));readErrors=Short.toUnsignedInt(b.getShort(60));queueDropped=Short.toUnsignedInt(b.getShort(62));nominalHz=b.getFloat(48);sport=bytes[12]&255;wrist=bytes[13]&255;startedUnix=b.getLong(16);bootStartUs=b.getLong(24);id=new String(bytes,32,16,StandardCharsets.US_ASCII);
             if(timingMode>1||sport>3||wrist>1||startedUnix<0||bootStartUs<0||!id.matches("[0-9a-f]{16}")||b.getShort(52)!=16||b.getShort(54)!=1024||!Float.isFinite(b.getFloat(48))||b.getFloat(48)<=0)throw new InvalidRecording("Invalid watch recording header");
         }
+        boolean hasClock() { return startedUnix>=1577836800L && startedUnix<4102444800L; }
     }
     public static Header importCsv(File binary,File csv,long expectedBytes,long expectedCrc,String expectedId)throws IOException {
         if(expectedBytes<64||expectedBytes>16*1024*1024||(expectedBytes-64)%26!=0||binary.length()!=expectedBytes)throw new InvalidRecording("Watch recording is incomplete");
@@ -36,7 +37,9 @@ public final class WatchRecording {
                     in.readFully(packet);MotionPacket next;
                     try{next=new MotionPacket(packet);if(next.preview)throw new IllegalArgumentException("Preview packet in raw watch archive");if(next.micros<header.bootStartUs)throw new IllegalArgumentException("Sample precedes session");if(previous!=null)MotionPacket.gap(previous.sequence,previous.micros,next);}
                     catch(IllegalArgumentException e){throw new InvalidRecording("Invalid watch motion sample",e);}
-                    out.write(next.csv());previous=next;
+                    long timestampUs=header.hasClock()
+                        ? header.startedUnix*1_000_000L+(next.micros-header.bootStartUs) : next.micros;
+                    out.write(next.csv(timestampUs));previous=next;
                 }
                 if(in.read()!=-1)throw new InvalidRecording("Unexpected trailing watch bytes");
             }
