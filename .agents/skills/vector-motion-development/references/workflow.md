@@ -2,7 +2,7 @@
 
 ## Devices and data preservation
 
-Historical identifiers: OnePlus13R/Android17 serial `953b5053`; watch `/dev/cu.usbmodem101`. Existing ADB `/Users/titan/Library/Android/sdk/platform-tools/adb`. Rediscover devices/ports; an old ready reply does not establish present availability.
+Historical identifiers: OnePlus13R/Android17 serial `953b5053`; watch `/dev/cu.usbmodem101`. On the Linux laptop, ADB was under `$HOME/Android/Sdk/platform-tools/adb`, the phone enumerated as `CPH2661` and the watch as `/dev/ttyACM0`. Rediscover devices/ports; an old ready reply does not establish present availability.
 
 Opening watch serial can reset it. Do not open serial during recording; use one serial owner and inspect diagnostics before/after. Stop & save before downloading. USB power changes test conditions.
 
@@ -12,7 +12,7 @@ Watch has6MiB motion archive at16–22MiB of confirmed32MiB flash. Preserve igno
 
 ## Build/check command map
 
-Run from repo root; keep outputs local. Existing Android SDK35/build-tools35.0.0, JDK17 and local ESP-IDF5.5.5; no Gradle installation required.
+Run from the repo root and keep outputs local. The scripts default to the historical macOS SDK and JDK paths. Set `ANDROID_SDK_ROOT`, `JAVA_HOME` and prepend `$JAVA_HOME/bin` to `PATH` when needed. Android v0.7 was built on Linux with Android Studio JBR 21, build tools 35.0.0 and the installed API 36 platform exposed at `platforms/android-35` inside a repo-local SDK shim. The APK still targets API 35. Watch builds use local ESP-IDF 5.5.5.
 
 | Work | Command |
 | --- | --- |
@@ -35,7 +35,7 @@ phone_serial=953b5053
 "$adb_bin" -s "$phone_serial" shell am instrument -w -e case fullrate com.vector.motion.tests/.DeviceChecks
 ```
 
-Fullrate case connects and records through a short screen-off interval, checks CSV/provenance/preview independence, and retains its test recording. It changes screen/connection state; run only within the task's scope with devices ready, without interrupting user recording. Inspect emitted PASS/FAIL: shell may exit0 after instrumentation crash. Visible UI cases need unlock. Other cases in `docs/SPORTS-APP.md`. Remove only `com.vector.motion.tests` afterward; product uninstall deletes originals.
+The fullrate case connects, requests panel sleep during a short BLE recording and retains its test file. It checks CSV clock anchoring, timestamp metadata, throughput, missing sequences and preview independence. Read `phoneScreenOffObserved` separately from PASS. Confirm a long-session summary on a large fixture separately from a physical endurance run. It changes screen/connection state; run only within the task's scope with devices ready, without interrupting user recording. Inspect emitted PASS/FAIL: shell may exit0 after instrumentation crash. Visible UI cases need unlock. Other cases in `docs/SPORTS-APP.md`. Remove only `com.vector.motion.tests` afterward; product uninstall deletes originals.
 
 For recording changes verify saved count, duration/rate, modular sequence gaps, max timestamp gap, clipping, metadata, and CRC/count for archive import. Separate source tests, fixtures and actual device evidence. Preserve evidence under ignored `.cache`/`recordings`. Both devices unplugged with phone screen off remain necessary before claiming long sports-session readiness. Documentation-only changes do not require repeating hardware tests.
 
@@ -50,4 +50,4 @@ Work/push on **main** by default. Inspect status, branch, ancestry and remote. P
 
 Keep personal authentication procedures and machine-specific credentials outside tracked documentation.
 
-Verify push with `git rev-parse HEAD` versus `git ls-remote origin refs/heads/main` and inspect status for preserved staging. If a push hangs, cancel it before retrying; remote SHA alone does not prove command completion. A local commit is not a successful push.
+If GitHub returns a repository permission 403, recheck the remote and report the required write access. A new branch on the same remote still requires repository write access. Verify push with `git rev-parse HEAD` versus `git ls-remote origin refs/heads/main` and inspect status for preserved staging. If a push hangs, cancel it before retrying; remote SHA alone does not prove command completion. A local commit is not a successful push.

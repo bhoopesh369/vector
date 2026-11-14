@@ -1,14 +1,14 @@
-# Vector Motion sports app — v0.3
+# Vector Motion sports app — v0.7
 
 ## Record and review
 
 - **Home** shows the watch status, local recording count, captured time, and recent sessions.
-- **Record** lets you choose Badminton, Tennis, Running, or Other and left/right wrist. Connect the watch, then start recording. The active layout groups time, sample count, **Add drill marker** and **Stop & save** together. Mark Rest, Forehand, Backhand, Warm-up, or a custom drill. A marker is tied to the latest received sample's watch timestamp and also stores UTC wall time.
+- **Record** lets you choose Badminton, Tennis, Running, or Other and left/right wrist. Connect the watch, then start recording. The active layout groups time, sample count, **Add drill marker** and **Stop & save** together. Mark Rest, Forehand, Backhand, Warm-up, or a custom drill. A marker uses the latest saved sample’s time base and also stores UTC wall time. **Dim display** blanks the app and requests minimum brightness. Tap to restore it, or use the phone power button for full panel sleep.
 - **Sessions** filters by sport and date, saves notes, and offers analysis and exports. Active files stay hidden until finalized.
-- **Analysis** shows measured motion and recording quality. Pinch a chart to zoom, drag horizontally, use the range sliders, or reset to the whole session. Axis toggles affect the plots; statistics always use all six original axes within the selected time range. Choose a drill marker to select that drill up to the next marker.
+- **Analysis** shows measured motion and recording quality. For sessions with up to 250,000 rows, pinch a chart to zoom, drag horizontally, use the range sliders, or reset to the whole session. Axis toggles affect the plots; statistics always use all six original axes within the selected time range. Choose a drill marker to select that drill up to the next marker.
 - Select two readable sessions in **Sessions**, then **Compare selected sessions**. Compare context (wrist/drill/fit) along with measurements; a higher peak does not necessarily mean better performance.
 
-The foreground service owns sensor capture independently of the visible screen. Navigation and activity recreation do not stop it. Bluetooth loss or five seconds without data ends and preserves the session; start a new session after reconnecting. The notification has a stop/disconnect action. No watch firmware update is needed for this app version.
+The foreground service owns sensor capture independently of the visible screen. Navigation and activity recreation do not stop it. Bluetooth loss or five seconds without data ends and preserves the session; start a new session after reconnecting. The notification has a stop/disconnect action. The v0.7 app works with existing full-rate watch firmware.
 
 ## Measurement definitions
 
@@ -31,7 +31,7 @@ Charts retain each axis's minimum and maximum within each visible pixel bucket, 
 
 ## Local files and compatibility
 
-CSV content and BLE protocol v1 are unchanged. Existing recordings remain readable; missing sport/wrist metadata displays **Not specified**. Legacy completion/interruption status text is retained. Historical records without UTC metadata show their saved file date.
+The CSV columns and BLE protocol v1 are unchanged. From Android v0.7, new phone recordings store Unix microseconds in `t_us` and show session dates in IST. The saved CSV remains available at full resolution. The app shows whole-session statistics and export for sessions over 250,000 rows. Use the exported data for interactive analysis of those long sessions. Existing recordings remain readable; missing sport/wrist metadata displays **Not specified**. Legacy completion/interruption status text is retained. Historical records without UTC metadata show their saved file date.
 
 Each new CSV has a version1 `.csv.session.json` sidecar for sport, wrist, notes, markers and outcome. Sidecars use atomic replacement, leaving raw CSV untouched. `.csv.analytics.json` is a disposable summary cache, keyed by CSV size, modification time and analytics version. It can be recalculated safely. Session summaries and range calculations run off the main UI thread.
 
@@ -70,7 +70,7 @@ Inspect the instrumentation result text for `PASS`; Android's shell command can 
 /Users/titan/Library/Android/sdk/platform-tools/adb uninstall com.vector.motion.tests
 ```
 
-## Verified scope
+## Historical UI and recording checks
 
 Host checks cover known vectors, sample-weighted RMS, selected ranges, timestamps, uint32 wrap, clipping and preservation of a narrow spike in reduced charts. On the OnePlus13R/Android17, storage/export/UI checks passed and existing recordings remained available after the update. Both independent-review findings (partial interrupted files staying hidden and notes callbacks submitting work after activity destruction) were reproduced and fixed with regression checks.
 

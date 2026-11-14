@@ -21,7 +21,7 @@ Connect to the watch in Vector Motion, then open **Watch recordings** from Home 
 
 Files remain on the watch after download. Interrupted downloads retain a partial file on the phone and resume after reconnection. Size, session identity and CRC are checked before import; existing phone CSV files are never overwritten. Use **Free storage...** on the watch only after transferring the sessions you want to keep; its confirmation deletes all watch motion sessions.
 
-The phone sets the watch clock when connecting. A session recorded before the clock is known uses its import time in history with a note explaining that its original date is unknown. Sensor-relative timestamps are retained.
+The phone sets the watch clock when connecting. Watch archives store boot-relative sample times and a session start time when the clock is known. Android v0.7 uses that anchor to write absolute Unix microseconds on a new import and displays the session date in IST. Without a valid watch clock, imported timestamps remain boot-relative and history shows the import time.
 
 ## Build and storage
 
@@ -55,7 +55,7 @@ Follow-up: battery-powered transfers intermittently stalled (first chunk and lat
 
 ## High-rate capture and mobile streaming
 
-The watch now configures matched accelerometer and gyroscope ODR code2, nominal1793.6Hz, ±16g/±1024dps, LPF mode3. The sensor task drains a128-frame FIFO at a64-frame watermark using bounded CTRL9 handshakes and400kHz I2C, and queues complete batches in PSRAM for buffered storage. The configured sensor rate is not a guarantee of the saved rate. Watch recording displays the measured saved sample rate.
+The watch now configures matched accelerometer and gyroscope ODR code2, nominal1793.6Hz, ±16g/±1024dps, LPF mode3. The sensor task drains a128-frame FIFO at a64-frame watermark using bounded CTRL9 handshakes and400kHz I2C, and queues complete batches in PSRAM for buffered storage. The gyro still uses ±1024 dps per axis. QMI8658C Rev A lists the setting for ±2048 dps from earlier revisions as unavailable. Support on the installed chip remains unverified. The configured sensor rate is not a guarantee of the saved rate. Watch recording displays the measured saved sample rate.
 
 Important QMI8658C constraint: FIFO read mode discards newly arriving sensor samples (manufacturer RevA section8.7). FIFO helps absorb scheduler delays but cannot make this shared-I2C board lossless. Within each batch, timestamps are reconstructed at the nominal sensor period; each batch is anchored to host time at FIFO-read entry. Real inter-batch pauses are retained. These are approximate batch-reconstructed timestamps, not individual hardware timestamps. Sequence gaps expose software queue loss; FIFO overflow/read errors are reported separately. Zero sequence gaps does not imply continuous hardware acquisition.
 
@@ -76,4 +76,4 @@ First verified high-rate file (318368b180e98b47):42881 samples over44.859623s,95
 Post-optimization validation: recording7bcfb5a2eb89dc83 has4744 samples/4.772246s=993.87165Hz,86.930ms maximum gap; recordingecb2ab144c41d00e has6507 samples/6.386410s=1018.72570Hz,65.714ms maximum gap. Both imported with valid CRC/count, finalized quality, zero sequence gaps, FIFO overflows, sensor-read errors, queue drops and clipping. Transfer cancellation/resume and duplicate preservation passed. These short USB-powered tests establish approximately1k samples/s saved throughput, not uniform1ms sampling, continuous lossless acquisition or long-duration battery reliability. Phone remained locked, so this verification used the recording service and did not assert visible UI checks.
 
 
-With version0.6, the phone can record the full acquired stream directly through UUID0005, using batched raw samples. There is no intentional live-data decimation in that stream. The old reduced preview remains available for older clients. See ANDROID.md for packet framing, loss handling and measured phone CSV rates. Watch-local recording and later download continue to work.
+Since Android v0.6, the phone can record the full acquired stream directly through UUID0005 using batched raw samples. Start recording on the phone and leave the watch recorder idle to save only on the phone. There is no intentional live-data decimation in that stream. The old reduced preview remains available for older clients. See ANDROID.md for packet framing, loss handling and measured phone CSV rates. Watch-local recording and later download continue to work.

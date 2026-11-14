@@ -1,6 +1,6 @@
 # Recording architecture and measurements
 
-Snapshot: 15 November 2026, v0.6 source at `fe03b05`. Recheck source and installed versions after changes; this is not a guarantee about attached hardware.
+Snapshot from 15 November 2026 for Android v0.7 at `3989616`. Recheck installed versions and attached hardware before device work.
 
 ## Product and source map
 
@@ -24,17 +24,25 @@ Watch build overlays tracked `firmware/watch` onto factory sources staged in `.c
 ## Recording paths
 
 1. **Standalone watch:** Start/Stop & save on watch; flash `.vmo` plus `.info`; phone downloads and verifies identity/size/CRC before import. Preserve duplicate files, cancellation/resume and existing raw data. Phone recording and archive download are mutually exclusive; transfers pause live streaming.
-2. **Phone full-rate v0.6:** Record → Connect watch → Start recording. UUID0005 saves every received acquired sample; source `bluetooth_fullrate`, filename `-fullrate`. No need to start watch-local recording. Service owns capture independently of screen/activity/navigation, supported by a foreground notification and wake lock.
+2. **Phone full-rate (introduced in v0.6):** Record → Connect watch → Start recording. UUID0005 saves every received acquired sample; source `bluetooth_fullrate`, filename `-fullrate`. The service writes a CSV in phone storage. Keep the standalone watch recorder idle when only a phone recording is desired. The service owns capture independently of the activity, with a foreground notification and wake lock. Budget roughly 350–400 MB of phone storage per hour at about 1,175 Hz, plus export space.
 3. **Legacy preview:** UUID0002 remains compatible. Current version2 preview selects a latest sample per FIFO batch, at most100Hz notifications and often much lower. It has its own sequence counter. Never label it a complete acquired stream or accept preview frames inside raw archives. Older pre-FIFO version1 firmware remains readable.
 
 `docs/ANDROID.md`, `docs/WATCH.md`, `docs/SPORTS-APP.md` retain older version sections. Statements such as112Hz, no FIFO, no watch storage or phone-preview-only describe historical implementations. Resolve applicability from current version/source.
+
+## CSV clocks and long sessions
+
+- BLE frames and raw watch archives still carry boot-relative microseconds. v0.7 phone CSVs store Unix microseconds in the existing `t_us` column. The phone anchors the last sample in the first saved packet to the BLE callback's wall clock and uses watch intervals throughout that session. BLE latency limits absolute accuracy. Sample ordering and timing gaps remain intact even if the phone clock changes later.
+- v0.7 imports use `startedUnix × 1,000,000 + (sampleUs − bootStartUs)` for watch archives with a valid session clock. The archive anchor has second resolution. Without a valid clock, imported samples stay boot-relative and the history date uses the import time. Existing CSVs are preserved.
+- Export session metadata with `timestampUnit`, `timeZone` and `clockSource` when available. Session dates use `Asia/Kolkata`. New drill markers keep the latest sample's timestamp in the same time base as the CSV and also record UTC wall time.
+- Whole-session summaries stream CSV rows with bounded memory. Above 250,000 rows, the app offers whole-session statistics and CSV/ZIP export. Smaller sessions retain interactive charts and range statistics.
+- **Dim display** blanks the app, requests minimum brightness and pauses its periodic UI updates. Tap the black screen to restore it. The phone power button switches the panel off or wakes it.
 
 ## Sensor range and timing
 
 - Current gyro range **±1024dps per axis**, accelerometer **±16g**. Combined gyro magnitude can exceed1024 by combining axes.
 - FIFO conversion: acceleration raw/2048, gyro raw/32. Separate wire scaling: acceleration ×1000 and gyro ×16 in signed int16, reversed by Android. Do not confuse sensor and packet scales.
 - Firmware flags near clipping at any axis magnitude ≥15.8g or ≥1010dps. This warns; it does not clamp readings at1010. Packet int16 saturation is separate; the phone adds no gyro cap.
-- Installed SensorLib exposes only through1024dps. QMI8658C publications differ by revision: some advertise2048, newer tables stop at1024. **2048 support on this physical chip is unresolved.** Verify revision/register support before changing it; do not assume an enum/register extension is safe.
+- Installed SensorLib exposes only through1024dps. The QMI8658C Rev 0.9 table lists ±2048 dps for code 111. Rev A lists that code as unavailable and ends at ±1024 dps. **2048 support on this physical chip is unresolved.** Verify revision/register support before changing it; do not assume an enum/register extension is safe.
 - A supported1024→2048 increase changes raw gyro resolution from1/32 to1/16dps, without inherently changing sample rate, packet size or BLE bandwidth. Update config, FIFO decode, clipping, archive range header, import validation, metadata, analytics/UI assumptions and tests together. Android currently rejects unsupported archive ranges. Already clipped peaks are unrecoverable. No range increase has been implemented.
 - Matched ODR code2, nominal1793.6Hz, LPF mode3;128-frame FIFO,64-frame watermark,400kHz I2C. Nominal ODR is not saved throughput.
 - FIFO read mode discards arriving sensor samples. Timestamps are nominally reconstructed inside batches and anchored to host time; inter-batch pauses remain. Sequence numbers cover software-acquired frames, not all possible hardware omissions. Preserve timing provenance and separate overflow/read-error/queue-drop counters.
@@ -63,6 +71,8 @@ Watch file:64-byte `VECTORM1` v1 header then26-byte packets. Header float nomina
 Phone metadata tracks sport/wrist/notes/markers/outcome/provenance; missing legacy context is Not specified. `.csv.analytics.json` is disposable cache. Notes/updates/interruption must preserve raw data and other metadata. ZIP contains original CSV, metadata and summaries. Whole-session and range analytics use full data; charts use peak-preserving envelopes independently. See `docs/SPORTS-APP.md` for metric definitions and metadata conventions.
 
 ## Historical evidence and limits
+
+Android v0.7 USB powered check saved 37,223 samples in 31.679667 s (1,174.95 Hz) with zero missing sequences and a 20.331 ms maximum timestamp gap. Verified the first CSV timestamp against the phone clock, timezone metadata and display preview independence. The dim and restore UI flow passed separately. The BLE check reported `phoneScreenOffObserved=false`. A separate host fixture summarized 4,230,001 rows spanning one hour within a 64 MiB Java heap. A full unplugged hardware session remains unverified.
 
 v0.6 OnePlus test:36659 samples/31.213151s ≈1174.44Hz; zero missing sequences; maximum timestamp gap20.764ms.35248 samples during30s phone screen off. Exported CSV count/rate/sequence/provenance independently checked. Short USB-powered test; long-duration battery reliability unverified. Service fullrate check worked locked; separate visible-UI check was blocked by lock screen.
 

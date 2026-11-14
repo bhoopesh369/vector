@@ -14,7 +14,7 @@ Read root `AGENTS.md`, inspect branch and staged/unstaged changes, then load onl
 - [Recording architecture and sensor limits](references/recording.md): firmware, BLE, CSV, analytics and range/rate questions.
 - [Laptop, verification and Git](references/workflow.md): builds, flashing, Android checks and Git.
 
-Repository paths are relative to the checkout root, `/Users/titan/vector` on this laptop. Recheck mutable device identifiers and installation state.
+Resolve repository paths from the checkout root. Rediscover host tools, connected devices and installed versions before using machine-specific examples.
 
 ## Project choices
 
@@ -26,11 +26,11 @@ Repository paths are relative to the checkout root, `/Users/titan/vector` on thi
 
 ## Measurement contract
 
-Current v0.6 phone recording uses the full acquired BLE stream when supported; only display charts are reduced. Legacy preview and standalone watch archive paths also exist. Read the recording reference before changing their handling. Older prototype sections in the docs do not describe every current path.
+Full-rate BLE recordings started on the phone are saved on the phone. Standalone watch recording starts separately on the watch. In v0.7, new phone CSVs use absolute Unix microseconds and the app displays times in IST. Preserve legacy CSVs and timestamp provenance. Read the recording reference before changing any of these paths.
 
 Hz sampling rate and dps angular-speed range are separate. Nominal ODR, saved average rate, reconstructed timestamps, transport loss and hardware acquisition gaps are different measurements. Zero sequence gaps does not establish continuous acquisition or uniform 1 ms spacing.
 
-Calculate analytics from full-resolution saved data, independent of chart reduction. Acceleration magnitude includes gravity. Separate motion measurements from quality indicators. Do not infer unlabelled strokes or claim calories, heart rate, racket/shuttle speed, recovery or validated performance ratings. Running distance from wrist IMU integration is not implemented or established; phone GPS would be a separate feature.
+Calculate analytics from full-resolution saved data, independent of chart reduction. Keep whole-session summaries bounded in memory so hour-long files remain readable and exportable. Acceleration magnitude includes gravity. Separate motion measurements from quality indicators. Do not infer unlabelled strokes or claim calories, heart rate, racket/shuttle speed, recovery or validated performance ratings. Running distance from wrist IMU integration is not implemented or established; phone GPS would be a separate feature.
 
 ## Finish
 

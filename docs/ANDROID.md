@@ -8,17 +8,21 @@ New phone CSVs use Unix microseconds in `t_us`. The phone anchors the first BLE 
 
 The phone computes whole-session statistics from every saved row using bounded memory. Sessions above 250,000 rows offer whole-session statistics and raw CSV or ZIP export. Export those sessions for interactive charts.
 
-# Current app: v0.6 full-rate mobile recording
+## v0.7 verification
+
+The Linux laptop and CPH2661 phone saved 37,223 samples over 31.68 seconds at about 1,175 Hz with zero sequence gaps and a 20.33 ms largest timestamp interval. The check verified absolute timestamps, metadata and full-rate saving. It reported `phoneScreenOffObserved=false`. Dim and restore passed separately. An hour-sized synthetic CSV with 4.23 million rows was summarized with a 64 MiB Java heap on the laptop. Unplugged endurance remains unverified.
+
+## Full-rate mobile recording introduced in v0.6
 
 See [sports app usage, analytics definitions and validation](SPORTS-APP.md) for the current Home / Record / Sessions interface. The sections below document the original prototype and BLE protocol, which remains compatible.
 
-Version 0.6 prefers the full-rate batched Bluetooth characteristic on updated watches. **Record → Connect watch → Start recording** saves every received acquired sample directly on the phone; charts remain a reduced display preview. Full-rate sessions are labelled `bluetooth_fullrate`, with `-fullrate` in CSV filenames. Legacy watches still work at their original stream rate; version0.5 preview-only firmware remains explicitly labelled as preview. Underlying watch FIFO timing gaps remain.
+Android has preferred the full-rate batched Bluetooth characteristic on compatible watches since v0.6. **Record → Connect watch → Start recording** saves every received acquired sample directly on the phone; charts remain a reduced display preview. Full-rate sessions are labelled `bluetooth_fullrate`, with `-fullrate` in CSV filenames. Legacy watches still work at their original stream rate; version0.5 preview-only firmware remains explicitly labelled as preview. Underlying watch FIFO timing gaps remain.
 
 Version 0.5 distinguished reduced-rate Bluetooth previews from full-rate watch archives, preserves sensor-rate/timing/acquisition-quality metadata, and accepts old firmware. With version0.5 firmware, full-rate recording starts on the watch; phone recordings are previews. Version0.6 adds full-rate streaming directly to the phone.
 
 Version 0.4 added **Watch recordings** for inventory, resumable Bluetooth download and verified import from the factory-based standalone recorder. See [watch firmware usage and verification status](WATCH.md). Wi-Fi transfer and microSD recording are not implemented. Existing minimal BLE firmware can still stream live samples but cannot provide saved watch sessions.
 
-# Vector Motion Android prototype
+## Historical Android prototype
 
 Installed and connected on OnePlus 13R (Android 17). User confirmed live readings on 12 November 2026. The user exported a phone recording after a screen-off check. Inspection found 4,637 samples over 41.635 seconds at 111.35 Hz, no sequence gaps, and a largest adjacent sample interval of 10.024 ms. Phone power logs show the recording wake lock held across the session and a screen-off transition during it. This demonstrates continuity for this short USB-connected test; extended unplugged screen-off operation remains to be checked.
 
