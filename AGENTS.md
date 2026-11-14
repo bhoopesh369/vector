@@ -9,4 +9,3 @@ These instructions apply to `/Users/titan/vector` only.
 - Use conventional commit messages. Exclude recordings, device backups, signing keys and generated build/tool files from commits.
 - Work and push on `main` by default for every user request. Do not create a feature branch unless the user explicitly requests one.
 - For Vector Motion development, device checks, sensor questions or releases, read [.agents/skills/vector-motion-development/SKILL.md](.agents/skills/vector-motion-development/SKILL.md).
-- On this laptop, the ignored `.tools/push-main.sh` helper reads the user-provided token file without changing global Git settings. See the skill for usage and fallback.

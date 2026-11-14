@@ -39,7 +39,7 @@ Fullrate case connects and records through a short screen-off interval, checks C
 
 For recording changes verify saved count, duration/rate, modular sequence gaps, max timestamp gap, clipping, metadata, and CRC/count for archive import. Separate source tests, fixtures and actual device evidence. Preserve evidence under ignored `.cache`/`recordings`. Both devices unplugged with phone screen off remain necessary before claiming long sports-session readiness. Documentation-only changes do not require repeating hardware tests.
 
-## Git/authentication
+## Git
 
 Work/push on **main** by default. Inspect status, branch, ancestry and remote. Preserve unrelated staging and use explicit intended paths. No force-push or GitHub CLI. Conventional messages; author and committer via repo-local settings or:
 
@@ -48,21 +48,6 @@ Work/push on **main** by default. Inspect status, branch, ancestry and remote. P
      commit --only <intended-paths> -m 'docs: document Vector Motion development workflow'
 ```
 
-On this laptop run `sh /Users/titan/vector/.tools/push-main.sh` for an authorized push. It is ignored and not distributed. It guards macOS/user/stable LocalHostName/main, reads `/Users/titan/gh_pass` through askpass, and pushes `HEAD:refs/heads/main`. Do not display the token, embed it in URLs/arguments/tracked files, change file ownership or global credential settings, or enable shell/credential tracing.
-
-If helper is absent, terminal-only fallback (user enters PAT as password, not GitHub account password), after confirming main:
-
-```sh
-cd /Users/titan/vector
-env -u GIT_ASKPASS -u SSH_ASKPASS GIT_TERMINAL_PROMPT=1 \
-git -c core.askPass= -c credential.helper= \
--c credential.username=bhoopesh369 push origin HEAD:refs/heads/main
-```
-
-Environment unsets and `git -c` affect only this command, preserving Oracle/work authentication. If rejected, stop retries of unchanged credentials and report failure; don't alter global helpers.
-
-Laptop identity lesson: `hostname` can change to an Oracle DHCP name on another network. The local helper reads `/usr/sbin/scutil --get LocalHostName` instead; it does not change system settings. This is a convenience guard, not a security identity.
-
-Askpass lesson: Git passes the prompt as an argument, not an invented `--askpass` flag. A self-invoking helper needs explicit callback-mode dispatch or it recursively pushes and hangs. Current helper uses `VECTOR_PUSH_ASKPASS=1`; callback prints username or token without invoking Git. Do not casually call that callback mode in tools: it intentionally emits credentials.
+Keep personal authentication procedures and machine-specific credentials outside tracked documentation.
 
 Verify push with `git rev-parse HEAD` versus `git ls-remote origin refs/heads/main` and inspect status for preserved staging. If a push hangs, cancel it before retrying; remote SHA alone does not prove command completion. A local commit is not a successful push.

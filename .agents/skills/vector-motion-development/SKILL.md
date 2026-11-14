@@ -12,7 +12,7 @@ Preserve acquired motion and existing recordings. Distinguish current source beh
 Read root `AGENTS.md`, inspect branch and staged/unstaged changes, then load only the relevant reference:
 
 - [Recording architecture and sensor limits](references/recording.md): firmware, BLE, CSV, analytics and range/rate questions.
-- [Laptop, verification and Git](references/workflow.md): builds, flashing, Android checks, authentication and push.
+- [Laptop, verification and Git](references/workflow.md): builds, flashing, Android checks and Git.
 
 Repository paths are relative to the checkout root, `/Users/titan/vector` on this laptop. Recheck mutable device identifiers and installation state.
 
