@@ -121,6 +121,7 @@ static void sensor_task(void*){
                 if(i==count-1){std::lock_guard<std::mutex> g(state_lock);current=axes;has_sample=true;}
             }
             {std::lock_guard<std::mutex> guard(enqueue_lock);if(recording&&xQueueSend(sample_queue,sensor_batch,0)!=pdTRUE)dropped+=count;}
+            ble_frames(sensor_batch->packets[0].data(),count);
             // A separate preview sequence avoids misreporting intentional decimation as transport loss.
             if(anchor-last_preview>=10000){last_preview=anchor;auto packet=sensor_batch->packets[count-1];packet[0]=2;vector_format::put(packet.data()+2,preview_seq++,4);ble_live(packet.data(),packet.size());}
         }

@@ -11,6 +11,7 @@ final class AnalysisScreen {
     AnalysisScreen(MainActivity host,SessionStore.Session session,List<MotionAnalytics.Sample> data){this.host=host;this.session=session;this.data=data;root=SportUi.column(host);
         SportUi.button(root,"← Sessions",false,()->host.navigate("Sessions"));SportUi.caption(root,SportUi.date(session));SportUi.heading(root,session.sport()+" / Analysis",28);
         SportUi.caption(root,session.wrist()+" wrist · "+session.outcome());if(!session.notes().isEmpty())SportUi.caption(root,session.notes());
+        if("bluetooth_fullrate".equals(session.metadata.optString("source")))SportUi.caption(root,"Full-rate Bluetooth recording · FIFO acquisition gaps can remain.");
         if("bluetooth_preview".equals(session.metadata.optString("source")))SportUi.caption(root,"Reduced-rate Bluetooth preview — full-rate data is available only in the recording saved on the watch.");
         SportUi.caption(root,"All metrics use received samples at full resolution. Acceleration includes gravity.");
         if(session.metadata.has("nominalSensorHz"))SportUi.caption(root,"Sensor configured: "+session.metadata.optDouble("nominalSensorHz")+" Hz. "+session.metadata.optString("timestampMode"));

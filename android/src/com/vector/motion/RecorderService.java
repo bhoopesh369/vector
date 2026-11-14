@@ -16,7 +16,9 @@ public class RecorderService extends Service {
     private static final UUID CCC = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     public volatile String status = "Connect your watch to start", recordingName = "", lastSaved = "";
     public volatile MotionPacket latest;
-    public volatile boolean ready, recording;
+    public volatile boolean ready, recording,fullRate;
+    public static final UUID BATCH=UUID.fromString("7b8e0005-6f27-4b8e-a9a1-3cd405ee1920");
+    private UUID motionCharacteristic=DATA;private int negotiatedMtu;private long lastChartUs;
     public volatile long count, missing, clipped;
     public volatile double recordedSeconds;
     private long recordingFirstUs;
@@ -125,11 +127,12 @@ public class RecorderService extends Service {
             }
             if(state==BluetoothProfile.STATE_CONNECTED) {
                 g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
-                if(!g.requestMtu(185)) shutdown("Could not request Bluetooth packet size");
+                if(!g.requestMtu(517)) shutdown("Could not request Bluetooth packet size");
             }
         }); }
         @Override public void onMtuChanged(BluetoothGatt g,int mtu,int result) { work.post(()->{
             if(g!=gatt || !active) return;
+            negotiatedMtu=mtu;
             if(result!=0 || mtu<29 || !g.discoverServices()) shutdown("Bluetooth packet-size negotiation failed");
         }); }
         @Override public void onServicesDiscovered(BluetoothGatt g,int result) { work.post(()->{
@@ -144,7 +147,9 @@ public class RecorderService extends Service {
                     else if(active&&!recording)getSystemService(NotificationManager.class).notify(1,notification(status));
                 });
             }
-            BluetoothGattCharacteristic data=service==null?null:service.getCharacteristic(DATA);
+            fullRate=service!=null&&service.getCharacteristic(BATCH)!=null;motionCharacteristic=fullRate?BATCH:DATA;
+            BluetoothGattCharacteristic data=service==null?null:service.getCharacteristic(motionCharacteristic);
+            if(fullRate&&negotiatedMtu<37){shutdown("Bluetooth MTU too small for full-rate data");return;}
             BluetoothGattDescriptor descriptor=data==null?null:data.getDescriptor(CCC);
             if(result!=0 || descriptor==null || !g.setCharacteristicNotification(data,true)) { shutdown("Watch motion service unavailable"); return; }
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
@@ -169,16 +174,25 @@ public class RecorderService extends Service {
         private void enqueueRead(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value,int result){byte[] copy=value==null?new byte[0]:value.clone();work.post(()->{if(g==gatt&&active&&sync!=null&&WatchSync.CONTROL.equals(c.getUuid()))sync.read(copy,result);});}
         private void enqueueNotification(BluetoothGatt g,BluetoothGattCharacteristic c,byte[] value) {
             if(value==null) return;
-            byte[] copy=value.clone(); work.post(()->{if(g!=gatt||!active)return;if(DATA.equals(c.getUuid()))receive(copy);else if(WatchSync.FILE.equals(c.getUuid())&&sync!=null)sync.chunk(copy);});
+            byte[] copy=value.clone(); work.post(()->{if(g!=gatt||!active)return;if(BATCH.equals(c.getUuid()))receiveBatch(copy);else if(DATA.equals(c.getUuid()))receive(copy);else if(WatchSync.FILE.equals(c.getUuid())&&sync!=null)sync.chunk(copy);});
         }
     };
     private void receive(byte[] bytes) {
         try {
             MotionPacket sample=new MotionPacket(bytes);
+            receiveSample(sample);
+        } catch(Exception e) { shutdown("Interrupted: "+e.getMessage()); }
+    }
+    private void receiveBatch(byte[] bytes) {
+        try {MotionBatch batch=new MotionBatch(bytes);if(batch.hasLoss()){shutdown("Interrupted: full-rate Bluetooth queue overflow; reconnect");return;}for(MotionPacket sample:batch.frames)receiveSample(sample);}
+        catch(Exception e){shutdown("Interrupted: "+e.getMessage());}
+    }
+    private void receiveSample(MotionPacket sample)throws IOException {
             long gap=previous==null?0:MotionPacket.gap(previous.sequence,previous.micros,sample);
+            if(fullRate&&recording&&count>0&&gap>0){missing+=gap;throw new IOException("Full-rate Bluetooth lost "+gap+" samples; reconnect");}
             previous=sample; latest=sample; lastData=SystemClock.elapsedRealtime();
-            synchronized(live){live.addLast(MotionAnalytics.Sample.from(sample));while(live.size()>1200)live.removeFirst();}
-            if(!ready) { ready=true; update("Connected • live motion"); }
+            if(sample.micros-lastChartUs>=10000){lastChartUs=sample.micros;synchronized(live){live.addLast(MotionAnalytics.Sample.from(sample));while(live.size()>1200)live.removeFirst();}}
+            if(!ready) { ready=true; update(fullRate?"Connected • full-rate motion":"Connected • live motion"); }
             if(recording) {
                 writer.write(sample.csv());
                 if(count==0) recordingFirstUs=sample.micros;
@@ -189,18 +203,17 @@ public class RecorderService extends Service {
                     update(String.format(Locale.US,"Recording • %.1f s • %,d samples saved",recordedSeconds,count));
                 }
             }
-        } catch(Exception e) { shutdown("Interrupted: "+e.getMessage()); }
     }
     private void beginRecording() throws IOException {
         if(!ready || recording || syncBusy) return;
-        recordingName=currentSport.toLowerCase(Locale.US)+(latest!=null&&latest.preview?"-preview":"")+"-"+Instant.now().toString().replace(':','-')+".csv";
+        recordingName=currentSport.toLowerCase(Locale.US)+(fullRate?"-fullrate":latest!=null&&latest.preview?"-preview":"")+"-"+Instant.now().toString().replace(':','-')+".csv";
         File f=new File(new File(getFilesDir(),"recordings"),recordingName);
         if(!f.createNewFile()) throw new IOException("Recording filename already exists");
         writer=new BufferedWriter(new FileWriter(f));
         writer.write(MotionPacket.HEADER+"\n"); writer.flush();
         new File(f.getPath()+".active").createNewFile();
         sessions.create(f,currentSport,currentWrist);
-        if(latest!=null&&latest.preview)sessions.markPreview(f);
+        if(fullRate)sessions.markFullRate(f);else if(latest!=null&&latest.preview)sessions.markPreview(f);
         count=missing=clipped=0; recordedSeconds=0; lastFlush=SystemClock.elapsedRealtime();
         recording=true; wake.acquire(); update("Recording "+currentSport+" • screen may be turned off");
     }
@@ -226,7 +239,7 @@ public class RecorderService extends Service {
     private void shutdown(String reason) {
         boolean endedRecording=writer!=null;
         finishRecording(reason);
-        active=false; ready=false;
+        active=false; ready=false;fullRate=false;lastChartUs=0;
         if(sync!=null){sync.close();sync=null;}syncAvailable=false;syncBusy=false;
         try { stopScan(); } catch(RuntimeException ignored) { scanning=false; }
         if(gatt!=null) { BluetoothGatt old=gatt; gatt=null; try { old.disconnect(); old.close(); } catch(RuntimeException ignored) {} }

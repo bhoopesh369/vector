@@ -53,7 +53,7 @@ Long-duration battery, unplugged screen-off standalone recording, power-loss and
 
 Follow-up: battery-powered transfers intermittently stalled (first chunk and later inventory responses), then connection attempts failed. Restarting the watch through USB restored transfer; the cause remains unresolved. Verified imports after restart include 449 samples/4.239047s with no sequence gaps or clipping, and 8082 samples/75.977035s at106.36Hz with no sequence gaps,32.664ms maximum timestamp gap and3.39025% clipped samples. Both passed CRC/count verification and cancel/reconnect/resume checks. Successful USB-powered retry does not establish battery-only transfer reliability.
 
-## High-rate firmware (v0.5 companion)
+## High-rate capture and mobile streaming
 
 The watch now configures matched accelerometer and gyroscope ODR code2, nominal1793.6Hz, ±16g/±1024dps, LPF mode3. The sensor task drains a128-frame FIFO at a64-frame watermark using bounded CTRL9 handshakes and400kHz I2C, and queues complete batches in PSRAM for buffered storage. The configured sensor rate is not a guarantee of the saved rate. Watch recording displays the measured saved sample rate.
 
@@ -61,7 +61,7 @@ Important QMI8658C constraint: FIFO read mode discards newly arriving sensor sam
 
 Original26-byte archive frames and64-byte version1 header remain readable. Header float@48 stores nominalHz; byte14=1 marks FIFO reconstructed timestamps. Byte15=1 marks finalized quality; uint16LE values@58/@60/@62 store FIFO overflows/read errors/queue drops, saturated at65535. Interrupted files may lack finalized counters; their interruption status remains visible. Existing byte14=0 recordings retain their old host-read timestamp meaning.
 
-Live Bluetooth uses packet version2 (same layout), its own contiguous preview sequence and at most100Hz notifications (usually one latest reading per FIFO batch). A phone recording from this stream is explicitly a preview, not the full-rate watch archive. Record on the watch and download afterwards for all saved samples. Android0.5 accepts both old version1 and preview version2 packets, rejects preview packets inside raw archives, and preserves nominal rate/timing/quality in session metadata and ZIP exports.
+Legacy preview Bluetooth (UUID0002) uses packet version2 (same layout), its own contiguous preview sequence and at most100Hz notifications (usually one latest reading per FIFO batch). A phone recording from this stream is explicitly a preview, not the full-rate watch archive. Record on the watch and download afterwards for all saved samples. Android0.5 accepts both old version1 and preview version2 packets, rejects preview packets inside raw archives, and preserves nominal rate/timing/quality in session metadata and ZIP exports.
 
 Optional derived export:
 
@@ -74,3 +74,6 @@ This standard-library tool accepts only contiguous input genuinely faster than10
 First verified high-rate file (318368b180e98b47):42881 samples over44.859623s,955.87Hz saved average,87.029ms maximum timestamp gap, zero flagged FIFO overflows/read errors/queue drops and valid CRC. This demonstrates faster capture but not a sustained1000Hz saved rate. A follow-up build increases the stdio buffer to32KiB in PSRAM and flush/fsync interval to2s to reduce flash overhead; this can lose roughly the most recent two seconds of buffered data on sudden power loss. The subsequent recording rate needs separate measurement. Successful Stop flushes/fsyncs the file and finalized quality metadata.
 
 Post-optimization validation: recording7bcfb5a2eb89dc83 has4744 samples/4.772246s=993.87165Hz,86.930ms maximum gap; recordingecb2ab144c41d00e has6507 samples/6.386410s=1018.72570Hz,65.714ms maximum gap. Both imported with valid CRC/count, finalized quality, zero sequence gaps, FIFO overflows, sensor-read errors, queue drops and clipping. Transfer cancellation/resume and duplicate preservation passed. These short USB-powered tests establish approximately1k samples/s saved throughput, not uniform1ms sampling, continuous lossless acquisition or long-duration battery reliability. Phone remained locked, so this verification used the recording service and did not assert visible UI checks.
+
+
+With version0.6, the phone can record the full acquired stream directly through UUID0005, using batched raw samples. There is no intentional live-data decimation in that stream. The old reduced preview remains available for older clients. See ANDROID.md for packet framing, loss handling and measured phone CSV rates. Watch-local recording and later download continue to work.

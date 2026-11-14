@@ -1,8 +1,10 @@
-# Current app: v0.5 high-rate watch capture and preview provenance
+# Current app: v0.6 full-rate mobile recording
 
 See [sports app usage, analytics definitions and validation](SPORTS-APP.md) for the current Home / Record / Sessions interface. The sections below document the original prototype and BLE protocol, which remains compatible.
 
-Version 0.5 distinguishes reduced-rate Bluetooth previews from full-rate watch archives, preserves sensor-rate/timing/acquisition-quality metadata, and accepts old firmware. High-rate recording starts on the watch; download it afterwards. Phone recordings from the new firmware are labelled previews.
+Version 0.6 prefers the full-rate batched Bluetooth characteristic on updated watches. **Record → Connect watch → Start recording** saves every received acquired sample directly on the phone; charts remain a reduced display preview. Full-rate sessions are labelled `bluetooth_fullrate`, with `-fullrate` in CSV filenames. Legacy watches still work at their original stream rate; version0.5 preview-only firmware remains explicitly labelled as preview. Underlying watch FIFO timing gaps remain.
+
+Version 0.5 distinguished reduced-rate Bluetooth previews from full-rate watch archives, preserves sensor-rate/timing/acquisition-quality metadata, and accepts old firmware. With version0.5 firmware, full-rate recording starts on the watch; phone recordings are previews. Version0.6 adds full-rate streaming directly to the phone.
 
 Version 0.4 added **Watch recordings** for inventory, resumable Bluetooth download and verified import from the factory-based standalone recorder. See [watch firmware usage and verification status](WATCH.md). Wi-Fi transfer and microSD recording are not implemented. Existing minimal BLE firmware can still stream live samples but cannot provide saved watch sessions.
 
@@ -65,3 +67,12 @@ Android background-service design follows [Bluetooth background guidance](https:
 ## Version 0.2
 
 Recording progress now shows elapsed sample time and saved-sample count on the screen and foreground notification (updated after the one-second buffer flush). Live graphs pause while the activity is hidden; the service writes independently. Interrupted outcomes persist across service recreation and appear in a completion notification. Legacy Android12 notification callbacks are supported.
+
+
+## Full-rate streaming protocol (v0.6)
+
+Optional notify characteristic `7b8e0005-6f27-4b8e-a9a1-3cd405ee1920` carries8-byte batch headers followed by1–18 original26-byte version1 samples. Header: byte0=0xA3,byte1=1,byte2=frame count,byte3=flags(bit0 queue loss),bytes4–7=uint32LE cumulative sender-queue dropped samples. Count/length/flags and every sample are validated. Preview frames are refused in this stream. Acquisition sequence numbers and timestamps are preserved. Confirmed transport gaps/queue overrun interrupt phone recording visibly. This is not a claim against all possible radio or acquisition loss.
+
+Firmware has a bounded4096-sample PSRAM transport queue and a dedicated sender, with notification backpressure retries. Requested ATT MTU517 yields18-sample values that fit two251-byte link-layer data packets; negotiated smaller MTUs use smaller batches. DLE251, fast connection intervals and2M PHY are requested with normal peer fallback. Actual throughput must be measured. Saved-file downloads pause/reset streaming queues and epochs; phone recording and archive download remain mutually exclusive.
+
+OnePlus validation:36659 saved samples/31.213151s=1174.44Hz, zero sequence gaps,20.764ms maximum timestamp gap.35248 samples arrived in a30-second interval with phone screen off at both boundaries. Full-rate metadata and reduced chart data were checked. Watch/phone both used USB power; long-duration battery reliability remains unverified. Host framing/legacy/resampling checks and both builds pass. Additional visible UI validation was skipped while phone was locked.

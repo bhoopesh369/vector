@@ -2,7 +2,6 @@ package com.vector.motion;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Locale;
 
 public final class MotionPacket {
     public static final String HEADER = "seq,t_us,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,clipped";
@@ -20,8 +19,15 @@ public final class MotionPacket {
         for (int i=0; i<6; i++) axes[i] = b.getShort(14+2*i) / (i<3 ? 1000f : 16f);
     }
     public String csv() {
-        return String.format(Locale.US, "%d,%d,%.3f,%.3f,%.3f,%.4f,%.4f,%.4f,%d\n",
-            sequence, micros, axes[0], axes[1], axes[2], axes[3], axes[4], axes[5], clipped);
+        StringBuilder out=new StringBuilder(100);out.append(sequence).append(',').append(micros);
+        for(int i=0;i<6;i++){
+            out.append(',');int raw=Math.round(axes[i]*(i<3?1000:16));
+            if(raw<0){out.append('-');raw=-raw;}
+            int scale=i<3?1000:16;out.append(raw/scale).append('.');
+            int fraction=i<3?raw%1000:(raw%16)*625;
+            for(int divisor=i<3?100:1000;divisor>0;divisor/=10)out.append((fraction/divisor)%10);
+        }
+        return out.append(',').append(clipped).append('\n').toString();
     }
     public static long gap(long previousSequence, long previousTime, MotionPacket next) {
         if (next.micros <= previousTime) throw new IllegalArgumentException("Watch restarted or timestamp reversed");

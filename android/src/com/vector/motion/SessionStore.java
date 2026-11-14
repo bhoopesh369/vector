@@ -116,6 +116,9 @@ public final class SessionStore {
         catch(IOException|JSONException ignored){} // A cache write failure must not hide a readable session.
         return stats;
     }
+    public void markFullRate(File csv)throws IOException {
+        synchronized(LOCK){try{JSONObject m=metadata(csv);m.put("source","bluetooth_fullrate").put("timestampMode","FIFO reconstructed within batches; host-anchored gaps").put("notes","Full acquired sample stream over Bluetooth. FIFO acquisition gaps can remain; sequence gaps report transport or software loss.");atomicJson(sidecar(csv,".session.json"),m);}catch(JSONException e){throw new IOException(e);}}
+    }
     public void markPreview(File csv)throws IOException {
         synchronized(LOCK){try{JSONObject m=metadata(csv);m.put("source","bluetooth_preview").put("notes","Reduced-rate Bluetooth preview. Start recording on the watch and download it later for full-rate data.");atomicJson(sidecar(csv,".session.json"),m);}catch(JSONException e){throw new IOException(e);}}
     }
