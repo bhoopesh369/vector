@@ -12,12 +12,13 @@ final class ArchiveChecks {
  static void run(Instrumentation test){Bundle result=new Bundle();Context context=test.getTargetContext();RecorderService[] recorder=new RecorderService[1];CountDownLatch latch=new CountDownLatch(1);boolean[] bound={false};
   ServiceConnection connection=new ServiceConnection(){public void onServiceConnected(ComponentName n,IBinder b){recorder[0]=((RecorderService.LocalBinder)b).service();latch.countDown();}public void onServiceDisconnected(ComponentName n){recorder[0]=null;}};
   try{
-   MainActivity activity=(MainActivity)test.startActivitySync(new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));test.waitForIdleSync();
+   boolean locked=context.getSystemService(KeyguardManager.class).isKeyguardLocked();MainActivity activity=locked?null:(MainActivity)test.startActivitySync(new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));if(activity!=null)test.waitForIdleSync();
    bound[0]=context.bindService(new Intent(context,RecorderService.class),connection,Context.BIND_AUTO_CREATE);LiveChecks.check(latch.await(10,TimeUnit.SECONDS),"Recorder bound");
-   LiveChecks.click(test,activity,"nav:Record");LiveChecks.click(test,activity,"connect");LiveChecks.until(()->recorder[0].syncAvailable&&!recorder[0].syncBusy,30000);
+   if(activity!=null){LiveChecks.click(test,activity,"nav:Record");LiveChecks.click(test,activity,"connect");}else context.startForegroundService(new Intent(context,RecorderService.class).setAction("CONNECT"));LiveChecks.until(()->recorder[0].syncAvailable&&!recorder[0].syncBusy,30000);
    LiveChecks.check(!recorder[0].watchSessions.isEmpty(),"No watch sessions yet. Record and stop a short session on the watch first. Status: "+recorder[0].syncStatus);
    File directory=new File(context.getFilesDir(),"recordings");
-   WatchSync.Item item=null;for(WatchSync.Item candidate:recorder[0].watchSessions)if(!new File(directory,"watch-"+candidate.id+".csv").exists()&&(item==null||candidate.started>item.started||(candidate.started==item.started&&candidate.bytes>item.bytes)))item=candidate;
+   StringBuilder catalog=new StringBuilder("Watch catalog: ");for(WatchSync.Item candidate:recorder[0].watchSessions)catalog.append(candidate.id).append(" start=").append(candidate.started).append(" bytes=").append(candidate.bytes).append(" imported=").append(new File(directory,"watch-"+candidate.id+".csv").exists()).append("; ");Bundle diagnostic=new Bundle();diagnostic.putString("stream",catalog.toString()+"\n");test.sendStatus(0,diagnostic);
+   WatchSync.Item item=null;for(WatchSync.Item candidate:recorder[0].watchSessions)if(!new File(directory,"watch-"+candidate.id+".csv").exists()&&(item==null||(candidate.started==0&&item.started!=0)||(candidate.started!=0&&item.started!=0&&candidate.started>item.started)||(candidate.started==item.started&&candidate.bytes>item.bytes)))item=candidate;
    if(item==null)item=recorder[0].watchSessions.get(0);
    WatchSync.Item chosen=item;File target=new File(directory,"watch-"+item.id+".csv");File partial=new File(new File(directory,".watch-downloads"),item.id+".vmo.part");
    boolean fresh=!target.exists();
@@ -33,12 +34,12 @@ final class ArchiveChecks {
     context.startForegroundService(new Intent(context,RecorderService.class).setAction("CONNECT"));LiveChecks.until(()->recorder[0].syncAvailable&&!recorder[0].syncBusy,30000);
    }
    context.startService(new Intent(context,RecorderService.class).setAction("WATCH_GET").putExtra("id",item.id));
-   LiveChecks.until(()->target.exists()&&!recorder[0].syncBusy,120000);
+   LiveChecks.until(()->target.exists()&&!recorder[0].syncBusy,Math.min(600000,60000+chosen.bytes*1000/1500));
    SessionStore store=new SessionStore(directory);MotionAnalytics.Stats stats=store.summary(target);LiveChecks.check(stats.count==item.samples,"Imported sample count matches watch inventory");LiveChecks.check(store.metadata(target).getLong("watchCrc")==item.crc,"CRC persisted");
    byte[] before=java.nio.file.Files.readAllBytes(target.toPath());context.startService(new Intent(context,RecorderService.class).setAction("WATCH_GET").putExtra("id",item.id));Thread.sleep(500);
    LiveChecks.check(java.util.Arrays.equals(before,java.nio.file.Files.readAllBytes(target.toPath())),"Duplicate import never overwrites CSV");
-   VisualChecks.click(test,activity,"nav:Home");VisualChecks.click(test,activity,"watch-library");VisualChecks.shot(test,"watch-library");
-   result.putString("stream","PASS: real watch inventory, corrupt-complete retry, cancel/reconnect/resume, verified import "+stats.count+" samples over "+stats.durationSeconds+" seconds, "+stats.receivedHz+" Hz, "+stats.missing+" sequence gaps, longest timestamp gap "+stats.maxGapUs+" us, clipping "+stats.clippedPercent()+"%, file "+target.getName()+", duplicate-import preservation, Watch library UI\n");
+   if(activity!=null){VisualChecks.click(test,activity,"nav:Home");VisualChecks.click(test,activity,"watch-library");VisualChecks.shot(test,"watch-library");}
+   result.putString("stream","PASS: real watch inventory, corrupt-complete retry, cancel/reconnect/resume, verified import "+stats.count+" samples over "+stats.durationSeconds+" seconds, "+stats.receivedHz+" Hz, "+stats.missing+" sequence gaps, longest timestamp gap "+stats.maxGapUs+" us, clipping "+stats.clippedPercent()+"%, quality "+store.metadata(target).optBoolean("qualityFinalized")+" / FIFO overflows "+store.metadata(target).optInt("fifoOverflows")+" / read errors "+store.metadata(target).optInt("sensorReadErrors")+" / queue drops "+store.metadata(target).optInt("queueDroppedSamples")+" / nominal Hz "+store.metadata(target).optDouble("nominalSensorHz")+", file "+target.getName()+", duplicate-import preservation, Watch library UI "+(activity==null?"skipped (phone locked)":"checked")+"\n");
    context.startService(new Intent(context,RecorderService.class).setAction("DISCONNECT"));test.finish(Activity.RESULT_OK,result);
   }catch(Throwable failure){result.putString("stream","FAIL: "+android.util.Log.getStackTraceString(failure)+"\nTransfer: "+(recorder[0]==null?"unbound":recorder[0].syncStatus+" / "+recorder[0].status));test.finish(Activity.RESULT_CANCELED,result);}finally{if(bound[0])try{context.unbindService(connection);}catch(Exception ignored){}}
  }

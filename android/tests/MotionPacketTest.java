@@ -20,7 +20,8 @@ public class MotionPacketTest {
   rejects(()->MotionPacket.gap(20,5,new MotionPacket(data(21,4))));
   rejects(()->MotionPacket.gap(20,5,new MotionPacket(data(20,6))));
   rejects(()->new MotionPacket(new byte[25]));
-  byte[] bad=data(1,1);bad[0]=2;rejects(()->new MotionPacket(bad));
+  byte[] bad=data(1,1);bad[0]=3;rejects(()->new MotionPacket(bad));
+  byte[] preview=data(5,5000);preview[0]=2;check(new MotionPacket(preview).preview);
   byte[] flag=data(1,1);flag[1]=2;rejects(()->new MotionPacket(flag));
   System.out.println("Protocol decoding, scaling, gaps, wrap and invalid packets: PASS");
  }

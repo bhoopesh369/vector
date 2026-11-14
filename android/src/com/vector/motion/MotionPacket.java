@@ -7,13 +7,13 @@ import java.util.Locale;
 public final class MotionPacket {
     public static final String HEADER = "seq,t_us,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,clipped";
     public final long sequence, micros;
-    public final int clipped;
+    public final int clipped;public final boolean preview;
     public final float[] axes = new float[6];
     public MotionPacket(byte[] bytes) {
-        if (bytes.length != 26 || bytes[0] != 1 || (bytes[1] & 0xfe) != 0)
+        if (bytes.length != 26 || (bytes[0] != 1 && bytes[0] != 2) || (bytes[1] & 0xfe) != 0)
             throw new IllegalArgumentException("Unsupported motion packet");
         ByteBuffer b = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
-        clipped = b.get(1);
+        clipped = b.get(1);preview=bytes[0]==2;
         sequence = Integer.toUnsignedLong(b.getInt(2));
         micros = b.getLong(6);
         if (micros < 0) throw new IllegalArgumentException("Invalid timestamp");

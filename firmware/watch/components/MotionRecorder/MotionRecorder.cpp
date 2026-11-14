@@ -77,9 +77,9 @@ void MotionRecorder::update(){
     lv_label_set_text(stateLabel,state);lv_obj_set_style_text_color(stateLabel,lv_color_hex(st.recording?CORAL:MINT),0);
     lv_label_set_text(lv_obj_get_child(button,0),busy?"Please wait…":st.recording?"Stop & save":"Start recording");lv_obj_set_style_bg_color(button,lv_color_hex(st.recording?0x9E403D:0x246A55),0);enable(button,!busy&&(st.recording||st.storage_ready));
     if(st.recording){selectedSport=st.sport;selectedWrist=st.wrist;lv_dropdown_set_selected(sport,selectedSport);lv_dropdown_set_selected(wrist,selectedWrist);}enable(sport,!st.recording&&!busy);enable(wrist,!st.recording&&!busy);
-    if(st.recording)snprintf(text,sizeof(text),"Saved on watch · %.1f MB free\nYou can return Home while recording",st.free_bytes/1048576.0);
+    if(st.recording)snprintf(text,sizeof(text),"%.0f Hz saved · %.1f MB free\nFull-rate capture on watch",st.seconds>0?st.samples/st.seconds:0,st.free_bytes/1048576.0);
     else if(busy)snprintf(text,sizeof(text),"%s",st.message.c_str());
-    else if(st.message=="Ready - internal flash")snprintf(text,sizeof(text),"No phone needed · %.1f MB free",st.free_bytes/1048576.0);
+    else if(st.message=="Ready - internal flash")snprintf(text,sizeof(text),"1793.6 Hz nominal / FIFO\nNo phone needed · %.1f MB free",st.free_bytes/1048576.0);
     else snprintf(text,sizeof(text),"%s",st.message.c_str());
     lv_label_set_text(info,text);
 }

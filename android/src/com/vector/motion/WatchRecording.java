@@ -13,12 +13,12 @@ public final class WatchRecording {
         InvalidRecording(String message,Throwable cause){super(message,cause);}
     }
     public static final class Header {
-        public final int sport,wrist;public final long startedUnix,bootStartUs;public final String id;
+        public final int sport,wrist,timingMode;public final float nominalHz;public final boolean qualityFinalized;public final int fifoOverflows,readErrors,queueDropped;public final long startedUnix,bootStartUs;public final String id;
         Header(byte[] bytes)throws IOException{
             ByteBuffer b=ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
             if(!new String(bytes,0,8,StandardCharsets.US_ASCII).equals("VECTORM1")||b.getShort(8)!=1||b.getShort(10)!=64||b.getShort(56)!=26)throw new InvalidRecording("Unsupported watch recording format");
-            sport=bytes[12]&255;wrist=bytes[13]&255;startedUnix=b.getLong(16);bootStartUs=b.getLong(24);id=new String(bytes,32,16,StandardCharsets.US_ASCII);
-            if(sport>3||wrist>1||startedUnix<0||bootStartUs<0||!id.matches("[0-9a-f]{16}")||b.getShort(52)!=16||b.getShort(54)!=1024||!Float.isFinite(b.getFloat(48))||b.getFloat(48)<=0)throw new InvalidRecording("Invalid watch recording header");
+            timingMode=bytes[14]&255;qualityFinalized=bytes[15]==1;fifoOverflows=Short.toUnsignedInt(b.getShort(58));readErrors=Short.toUnsignedInt(b.getShort(60));queueDropped=Short.toUnsignedInt(b.getShort(62));nominalHz=b.getFloat(48);sport=bytes[12]&255;wrist=bytes[13]&255;startedUnix=b.getLong(16);bootStartUs=b.getLong(24);id=new String(bytes,32,16,StandardCharsets.US_ASCII);
+            if(timingMode>1||sport>3||wrist>1||startedUnix<0||bootStartUs<0||!id.matches("[0-9a-f]{16}")||b.getShort(52)!=16||b.getShort(54)!=1024||!Float.isFinite(b.getFloat(48))||b.getFloat(48)<=0)throw new InvalidRecording("Invalid watch recording header");
         }
     }
     public static Header importCsv(File binary,File csv,long expectedBytes,long expectedCrc,String expectedId)throws IOException {
@@ -34,7 +34,7 @@ public final class WatchRecording {
                 long samples=(expectedBytes-64)/26;byte[] packet=new byte[26];
                 for(long i=0;i<samples;i++) {
                     in.readFully(packet);MotionPacket next;
-                    try{next=new MotionPacket(packet);if(next.micros<header.bootStartUs)throw new IllegalArgumentException("Sample precedes session");if(previous!=null)MotionPacket.gap(previous.sequence,previous.micros,next);}
+                    try{next=new MotionPacket(packet);if(next.preview)throw new IllegalArgumentException("Preview packet in raw watch archive");if(next.micros<header.bootStartUs)throw new IllegalArgumentException("Sample precedes session");if(previous!=null)MotionPacket.gap(previous.sequence,previous.micros,next);}
                     catch(IllegalArgumentException e){throw new InvalidRecording("Invalid watch motion sample",e);}
                     out.write(next.csv());previous=next;
                 }

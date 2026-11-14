@@ -1,5 +1,7 @@
 #include "motion_service.hpp"
 #include "record_format.hpp"
+#include "high_rate.hpp"
+#include "qmi_fifo.hpp"
 #include <SensorQMI8658.hpp>
 #include "bsp/esp-bsp.h"
 #include "esp_vfs_fat.h"
@@ -32,7 +34,10 @@ static std::atomic<bool> recording{false},pending{false};
 static QueueHandle_t sample_queue,command_queue;
 static StaticQueue_t sample_queue_control;static std::atomic<bool> service_ready{false};static SensorQMI8658 imu;
 struct Command{uint8_t action,sport,wrist;};
-struct Queued{vector_format::Packet packet;uint64_t us;};
+struct Queued{vector_format::Packet packets[128];uint16_t count;};
+static Queued *sensor_batch,*writer_batch;static QmiFifo fifo;
+static std::atomic<uint32_t> fifo_overflows{0},read_errors{0};static std::atomic<uint64_t> fifo_pause_us{0};
+static uint8_t* file_buffer=nullptr;
 static FILE *file=nullptr;static std::string id;static uint64_t written=0,limit=0,started_us=0;static uint32_t crc=0;static std::atomic<uint32_t> dropped{0};
 static FILE *download=nullptr;static std::string download_id;static std::atomic<int64_t> transfer_deadline{0};
 static void message(const std::string&text){std::lock_guard<std::mutex> guard(state_lock);state.message=text;}
@@ -47,11 +52,13 @@ static bool scan_file(const std::string&key,Saved &out,bool repair){
     if(good!=static_cast<size_t>(size)&&ftruncate(fileno(f),good)!=0){fclose(f);return false;}
     rewind(f);uint8_t block[512];uint32_t sum=0;size_t remaining=good;
     while(remaining){size_t n=fread(block,1,std::min(remaining,sizeof(block)),f);if(!n){fclose(f);return false;}sum=esp_rom_crc32_le(sum,block,n);remaining-=n;}
-    fclose(f);out.id=key;out.bytes=good;out.crc=sum;out.samples=(good-64)/26;out.started=vector_format::u64(header.data()+16);out.sport=header[12];out.wrist=header[13];return true;
+    if(good>=64+52){uint8_t first[26],last[26];if(fseek(f,64,SEEK_SET)!=0||fread(first,1,26,f)!=26||fseek(f,good-26,SEEK_SET)!=0||fread(last,1,26,f)!=26){fclose(f);return false;}uint64_t begin=vector_format::u64(first+6),end=vector_format::u64(last+6);if(end>begin)out.seconds=(end-begin)/1e6;}
+    fclose(f);out.id=key;out.bytes=good;out.crc=sum;out.samples=(good-64)/26;out.started=vector_format::u64(header.data()+16);out.sport=header[12];out.wrist=header[13];std::memcpy(&out.nominal_hz,header.data()+48,4);out.timing_mode=header[14];return true;
 }
 static bool save_info(const Saved&s){
     cJSON *j=cJSON_CreateObject();cJSON_AddStringToObject(j,"id",s.id.c_str());cJSON_AddNumberToObject(j,"bytes",s.bytes);cJSON_AddNumberToObject(j,"crc",s.crc);cJSON_AddNumberToObject(j,"samples",s.samples);
     cJSON_AddNumberToObject(j,"start",s.started);cJSON_AddNumberToObject(j,"sport",s.sport);cJSON_AddNumberToObject(j,"wrist",s.wrist);cJSON_AddStringToObject(j,"outcome",s.outcome.c_str());
+    cJSON_AddNumberToObject(j,"nominalHz",s.nominal_hz);cJSON_AddNumberToObject(j,"timingMode",s.timing_mode);cJSON_AddNumberToObject(j,"fifoOverflows",s.fifo_overflows);cJSON_AddNumberToObject(j,"readErrors",s.read_errors);cJSON_AddNumberToObject(j,"fifoReadPauseUs",s.fifo_pause_us);cJSON_AddNumberToObject(j,"queueDroppedSamples",s.queue_dropped);
     char *text=cJSON_PrintUnformatted(j);cJSON_Delete(j);if(!text)return false;std::string tmp=path(s.id,".tmp"),dest=path(s.id,".info");FILE*f=fopen(tmp.c_str(),"wb");bool okay=false;
     if(f){okay=fwrite(text,1,strlen(text),f)==strlen(text)&&fflush(f)==0&&fsync(fileno(f))==0;okay=fclose(f)==0&&okay;}cJSON_free(text);if(okay)okay=rename(tmp.c_str(),dest.c_str())==0;if(!okay)unlink(tmp.c_str());return okay;
 }
@@ -63,51 +70,63 @@ static bool read_info(const std::string&key,Saved&out){
 }
 static std::vector<std::string> keys(){std::vector<std::string> result;DIR *dir=opendir(ROOT);if(!dir)return result;dirent *entry;while((entry=readdir(dir))){std::string name=entry->d_name;if(name.size()==20&&name.substr(16)==".vmo"&&vector_format::valid_id(name.substr(0,16)))result.push_back(name.substr(0,16));}closedir(dir);std::sort(result.begin(),result.end());return result;}
 static void finish(const char*reason){
-    if(!file){return;}{std::lock_guard<std::mutex> guard(enqueue_lock);pending=true;recording=false;}bool durable=fflush(file)==0&&fsync(fileno(file))==0;durable=fclose(file)==0&&durable;file=nullptr;
-    Saved saved;bool okay=scan_file(id,saved,!durable);if(okay){saved.outcome=durable?reason:"Write interrupted";okay=save_info(saved);}
+    if(!file){return;}{std::lock_guard<std::mutex> guard(enqueue_lock);pending=true;recording=false;}
+    uint8_t quality[6]{};vector_format::put(quality,std::min(uint32_t(65535),fifo_overflows.load()),2);vector_format::put(quality+2,std::min(uint32_t(65535),read_errors.load()),2);vector_format::put(quality+4,std::min(uint32_t(65535),dropped.load()),2);
+    const uint8_t finalized=1;bool quality_saved=fseek(file,58,SEEK_SET)==0&&fwrite(quality,1,6,file)==6&&fflush(file)==0&&fsync(fileno(file))==0;
+    quality_saved=quality_saved&&fseek(file,15,SEEK_SET)==0&&fwrite(&finalized,1,1,file)==1;
+    bool durable=quality_saved&&fflush(file)==0&&fsync(fileno(file))==0;durable=fclose(file)==0&&durable;file=nullptr;
+    Saved saved;bool okay=scan_file(id,saved,!durable);if(okay){saved.outcome=durable?reason:"Write interrupted";saved.fifo_overflows=fifo_overflows;saved.read_errors=read_errors;saved.fifo_pause_us=fifo_pause_us;saved.queue_dropped=dropped;if(fifo_overflows||read_errors)saved.outcome+="; acquisition loss detected";okay=save_info(saved);ESP_LOGI("VectorMotion","Saved session %s: %llu samples / %.6f seconds = %.2f Hz; FIFO=%lu read_errors=%lu queue_drops=%lu CRC=%08lx",saved.id.c_str(),static_cast<unsigned long long>(saved.samples),saved.seconds,saved.seconds>0?(saved.samples-1)/saved.seconds:0,static_cast<unsigned long>(saved.fifo_overflows),static_cast<unsigned long>(saved.read_errors),static_cast<unsigned long>(saved.queue_dropped),static_cast<unsigned long>(saved.crc));}
     recording=false;pending=false;refresh_space();std::lock_guard<std::mutex> g(state_lock);state.recording=false;state.message=okay?std::string(reason)+" - saved on watch":"Save error; retain watch files for recovery";
 }
 static void start_file(uint8_t sport,uint8_t wrist){
     std::lock_guard<std::mutex> disk(fs_lock);refresh_space();Status st=status();if(!st.storage_ready||recording||transfer_active()||st.free_bytes<256*1024){pending=false;message("Cannot start: storage low or transfer active");return;}
     char name[17];for(int attempt=0;attempt<10&&!file;attempt++){snprintf(name,sizeof(name),"%08lx%08lx",static_cast<unsigned long>(esp_random()),static_cast<unsigned long>(esp_random()));id=name;struct stat prior{};if(stat(path(id,".vmo").c_str(),&prior)==0)continue;file=fopen(path(id,".vmo").c_str(),"wb");}
-    if(!file){pending=false;message("Could not create recording");return;}setvbuf(file,nullptr,_IOFBF,8192);started_us=esp_timer_get_time();time_t now=time(nullptr);uint64_t utc=now>1577836800?now:0;
-    auto header=vector_format::header(id,sport,wrist,utc,started_us);written=64;limit=st.free_bytes-128*1024;crc=esp_rom_crc32_le(0,header.data(),64);dropped=0;xQueueReset(sample_queue);
+    if(!file){pending=false;message("Could not create recording");return;}setvbuf(file,reinterpret_cast<char*>(file_buffer),_IOFBF,32768);started_us=esp_timer_get_time();time_t now=time(nullptr);uint64_t utc=now>1577836800?now:0;
+    auto header=vector_format::header(id,sport,wrist,utc,started_us,vector_high_rate::RATE,1);written=64;limit=st.free_bytes-128*1024;crc=esp_rom_crc32_le(0,header.data(),64);dropped=0;fifo_overflows=0;read_errors=0;fifo_pause_us=0;xQueueReset(sample_queue);
     if(fwrite(header.data(),1,64,file)!=64){finish("Storage write failed");return;}
     {std::lock_guard<std::mutex> g(state_lock);state.recording=true;state.sport=sport;state.wrist=wrist;state.samples=0;state.seconds=0;state.dropped=0;state.message="Recording on internal flash";}recording=true;pending=false;
 }
-static void write_sample(const Queued& sample){
+static void write_batch(const Queued& batch){
     std::lock_guard<std::mutex> disk(fs_lock);
-    if(!file||sample.us<started_us)return;
-    if(written+26>limit){finish("Storage full");return;}
-    if(fwrite(sample.packet.data(),1,26,file)!=26){finish("Storage write failed");return;}
-    written+=26;crc=esp_rom_crc32_le(crc,sample.packet.data(),26);
-    {std::lock_guard<std::mutex> g(state_lock);state.samples=(written-64)/26;state.seconds=(sample.us-started_us)/1e6;state.dropped=dropped;}
-    static uint64_t last_flush=0;
-    if(sample.us-last_flush>1000000){last_flush=sample.us;if(fflush(file)!=0||fsync(fileno(file))!=0){finish("Storage write failed");return;}refresh_space();}
+    if(!file)return;
+    size_t first=0;while(first<batch.count&&vector_format::u64(batch.packets[first].data()+6)<started_us)first++;
+    if(first==batch.count)return;
+    size_t count=std::min(size_t(batch.count-first),size_t((limit-written)/26));
+    if(count){size_t bytes=count*26;const uint8_t* data=batch.packets[first].data();
+        if(fwrite(data,1,bytes,file)!=bytes){finish("Storage write failed");return;}
+        written+=bytes;crc=esp_rom_crc32_le(crc,data,bytes);uint64_t us=vector_format::u64(batch.packets[first+count-1].data()+6);
+        {std::lock_guard<std::mutex> g(state_lock);state.samples=(written-64)/26;state.seconds=(us-started_us)/1e6;state.dropped=dropped;}
+        static uint64_t last_flush=0;
+        if(us-last_flush>2000000){last_flush=us;if(fflush(file)!=0||fsync(fileno(file))!=0){finish("Storage write failed");return;}refresh_space();}
+    }
+    if(count<batch.count-first)finish("Storage full");
 }
 static void writer_task(void*){
-    while(true){
-        Command command{};
+    while(true){Command command{};
         while(xQueueReceive(command_queue,&command,0)==pdTRUE){
             if(command.action==1)start_file(command.sport,command.wrist);
-            else if(command.action==2){
-                // stop() already barred new enqueues; preserve every sample acquired before it.
-                Queued queued{};while(xQueueReceive(sample_queue,&queued,0)==pdTRUE)write_sample(queued);
-                std::lock_guard<std::mutex> disk(fs_lock);finish("Stopped");
-            }
+            else if(command.action==2){while(xQueueReceive(sample_queue,writer_batch,0)==pdTRUE)write_batch(*writer_batch);std::lock_guard<std::mutex> disk(fs_lock);finish("Stopped");}
         }
-        Queued sample{};if(xQueueReceive(sample_queue,&sample,pdMS_TO_TICKS(10))==pdTRUE)write_sample(sample);
+        if(xQueueReceive(sample_queue,writer_batch,pdMS_TO_TICKS(10))==pdTRUE)write_batch(*writer_batch);
     }
 }
 static void sensor_task(void*){
-    uint32_t seq=0;while(true){if(imu.getDataReady()){
-        std::array<float,6>a{};if(imu.getAccelerometer(a[0],a[1],a[2])&&imu.getGyroscope(a[3],a[4],a[5])){
-            uint64_t us=esp_timer_get_time();bool clipped=false;for(int i=0;i<6;i++)if(std::fabs(a[i])>=(i<3?15.8:1010))clipped=true;
-            auto packet=vector_format::packet(seq++,us,a,clipped);{std::lock_guard<std::mutex> g(state_lock);current=a;has_sample=true;}
-            {std::lock_guard<std::mutex> guard(enqueue_lock);if(recording){Queued q{packet,us};if(xQueueSend(sample_queue,&q,0)!=pdTRUE)dropped++;}}
-            ble_live(packet.data(),packet.size());
+    uint32_t seq=0,preview_seq=0;uint32_t consecutive_errors=0;uint64_t last_preview=0,diagnostic_start=esp_timer_get_time(),frames=0;vector_high_rate::BatchClock clock;uint8_t raw[1536];
+    while(true){uint64_t anchor=0,pause=0;bool overflow=false;int count=fifo.drain(raw,anchor,overflow,pause);
+        if(count<0){consecutive_errors++;if(recording){read_errors++;if(consecutive_errors>=3)stop();}ESP_LOGE("VectorMotion","FIFO acquisition error %d",count);vTaskDelay(pdMS_TO_TICKS(10));continue;}
+        if(count>0){consecutive_errors=0;frames+=count;uint64_t first=clock.first(anchor,count);if(!first){if(recording)read_errors++;ESP_LOGE("VectorMotion","Rejected overlapping FIFO timestamp anchor");continue;}sensor_batch->count=count;
+            if(recording){fifo_pause_us+=pause;if(overflow)fifo_overflows++;}
+            for(int i=0;i<count;i++){auto axes=vector_high_rate::decode(raw+i*12);uint64_t us=clock.at(first,i);bool clipped=false;for(int k=0;k<6;k++)if(std::fabs(axes[k])>=(k<3?15.8:1010))clipped=true;
+                sensor_batch->packets[i]=vector_format::packet(seq++,us,axes,clipped);
+                if(i==count-1){std::lock_guard<std::mutex> g(state_lock);current=axes;has_sample=true;}
+            }
+            {std::lock_guard<std::mutex> guard(enqueue_lock);if(recording&&xQueueSend(sample_queue,sensor_batch,0)!=pdTRUE)dropped+=count;}
+            // A separate preview sequence avoids misreporting intentional decimation as transport loss.
+            if(anchor-last_preview>=10000){last_preview=anchor;auto packet=sensor_batch->packets[count-1];packet[0]=2;vector_format::put(packet.data()+2,preview_seq++,4);ble_live(packet.data(),packet.size());}
         }
-    }vTaskDelay(pdMS_TO_TICKS(1));}
+        int64_t now=esp_timer_get_time();if(now-diagnostic_start>=5000000){ESP_LOGI("VectorMotion","FIFO capture: %llu frames / %lld us, recording=%d, queue drops=%lu",static_cast<unsigned long long>(frames),static_cast<long long>(now-diagnostic_start),int(recording.load()),static_cast<unsigned long>(dropped.load()));frames=0;diagnostic_start=now;}
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
 }
 static esp_err_t storage_init(){
     const esp_partition_t*part=esp_partition_find_first(ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_FAT,"records");if(!part)return ESP_ERR_NOT_FOUND;
@@ -124,20 +143,25 @@ static esp_err_t storage_init(){
 }
 esp_err_t start(){
     esp_err_t storage=storage_init();message(storage==ESP_OK?"Ready - internal flash":"Storage unavailable; no automatic erase");
-    if(!imu.begin(bsp_i2c_get_handle(),QMI8658_L_SLAVE_ADDRESS)&&!imu.begin(bsp_i2c_get_handle(),QMI8658_H_SLAVE_ADDRESS))return ESP_ERR_NOT_FOUND;
-    if(imu.configAccelerometer(SensorQMI8658::ACC_RANGE_16G,SensorQMI8658::ACC_ODR_125Hz,SensorQMI8658::LPF_MODE_3)!=0||imu.configGyroscope(SensorQMI8658::GYR_RANGE_1024DPS,SensorQMI8658::GYR_ODR_112_1Hz,SensorQMI8658::LPF_MODE_3)!=0)return ESP_FAIL;
+    uint8_t address=QMI8658_L_SLAVE_ADDRESS;
+    if(!imu.begin(bsp_i2c_get_handle(),address)){address=QMI8658_H_SLAVE_ADDRESS;if(!imu.begin(bsp_i2c_get_handle(),address))return ESP_ERR_NOT_FOUND;}
+    // ODR code2 is the datasheet's 1793.6Hz 6DOF mode (absent from this vendor AccelODR enum).
+    if(imu.configAccelerometer(SensorQMI8658::ACC_RANGE_16G,static_cast<SensorQMI8658::AccelODR>(2),SensorQMI8658::LPF_MODE_3)!=0||imu.configGyroscope(SensorQMI8658::GYR_RANGE_1024DPS,SensorQMI8658::GYR_ODR_1793_6Hz,SensorQMI8658::LPF_MODE_3)!=0)return ESP_FAIL;
     if(!imu.enableGyroscope()||!imu.enableAccelerometer())return ESP_FAIL;
+    if(imu.configFIFO(SensorQMI8658::FIFO_MODE_STREAM,SensorQMI8658::FIFO_SAMPLES_128,SensorQMI8658::INTERRUPT_PIN_DISABLE,64)!=0||!fifo.begin(bsp_i2c_get_handle(),address))return ESP_FAIL;
     ESP_LOGI("VectorMotion","Internal heap free/largest: %u/%u",static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)));
     // Only task contexts touch this queue. Flash operations pause the other core while PSRAM is inaccessible.
-    auto *sample_buffer=static_cast<uint8_t*>(heap_caps_malloc(512*sizeof(Queued),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
-    if(!sample_buffer){message("Recorder unavailable: sample buffer allocation failed");return ESP_ERR_NO_MEM;}
-    sample_queue=xQueueCreateStatic(512,sizeof(Queued),sample_buffer,&sample_queue_control);command_queue=xQueueCreate(8,sizeof(Command));if(!sample_queue||!command_queue){message("Recorder unavailable: queue allocation failed");return ESP_ERR_NO_MEM;}
+    auto *sample_buffer=static_cast<uint8_t*>(heap_caps_malloc(32*sizeof(Queued),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
+    sensor_batch=static_cast<Queued*>(heap_caps_malloc(sizeof(Queued),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));writer_batch=static_cast<Queued*>(heap_caps_malloc(sizeof(Queued),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
+    file_buffer=static_cast<uint8_t*>(heap_caps_malloc(32768,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
+    if(!sample_buffer||!sensor_batch||!writer_batch||!file_buffer){message("Recorder unavailable: sample buffer allocation failed");return ESP_ERR_NO_MEM;}
+    sample_queue=xQueueCreateStatic(32,sizeof(Queued),sample_buffer,&sample_queue_control);command_queue=xQueueCreate(8,sizeof(Command));if(!sample_queue||!command_queue){message("Recorder unavailable: queue allocation failed");return ESP_ERR_NO_MEM;}
     if(xTaskCreatePinnedToCore(writer_task,"motion-store",6144,nullptr,4,nullptr,0)!=pdPASS||xTaskCreatePinnedToCore(sensor_task,"motion-sensor",6144,nullptr,5,nullptr,1)!=pdPASS){message("Recorder unavailable: task stack allocation failed");return ESP_ERR_NO_MEM;}
     service_ready=true;return ESP_OK;
 }
 bool latest(float axes[6]){std::lock_guard<std::mutex>g(state_lock);if(!has_sample)return false;std::copy(current.begin(),current.end(),axes);return true;}
 Status status(){std::lock_guard<std::mutex>g(state_lock);return state;}
-bool begin(uint8_t sport,uint8_t wrist){if(!service_ready){message("Recorder not ready; check device diagnostics");return false;}if(recording||pending.exchange(true))return false;Command c{1,sport,wrist};if(sport>3||wrist>1||xQueueSend(command_queue,&c,0)!=pdTRUE){pending=false;return false;}message("Starting recording...");return true;}
+bool begin(uint8_t sport,uint8_t wrist){if(!service_ready){message("Recorder not ready; check device diagnostics");return false;}float axes[6];if(!latest(axes)){message("Sensor not producing samples; cannot record");return false;}if(recording||pending.exchange(true))return false;Command c{1,sport,wrist};if(sport>3||wrist>1||xQueueSend(command_queue,&c,0)!=pdTRUE){pending=false;return false;}message("Starting recording...");return true;}
 void stop(){
     if(!service_ready)return;
     {std::lock_guard<std::mutex> guard(enqueue_lock);if(!recording.exchange(false))return;pending=true;}

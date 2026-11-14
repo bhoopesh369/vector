@@ -1,8 +1,10 @@
-# Current app: v0.4 watch imports and sports redesign
+# Current app: v0.5 high-rate watch capture and preview provenance
 
 See [sports app usage, analytics definitions and validation](SPORTS-APP.md) for the current Home / Record / Sessions interface. The sections below document the original prototype and BLE protocol, which remains compatible.
 
-Version 0.4 adds **Watch recordings** for inventory, resumable Bluetooth download and verified import from the factory-based standalone recorder. See [watch firmware usage and verification status](WATCH.md). Wi-Fi transfer and microSD recording are not implemented. Existing minimal BLE firmware can still stream live samples but cannot provide saved watch sessions.
+Version 0.5 distinguishes reduced-rate Bluetooth previews from full-rate watch archives, preserves sensor-rate/timing/acquisition-quality metadata, and accepts old firmware. High-rate recording starts on the watch; download it afterwards. Phone recordings from the new firmware are labelled previews.
+
+Version 0.4 added **Watch recordings** for inventory, resumable Bluetooth download and verified import from the factory-based standalone recorder. See [watch firmware usage and verification status](WATCH.md). Wi-Fi transfer and microSD recording are not implemented. Existing minimal BLE firmware can still stream live samples but cannot provide saved watch sessions.
 
 # Vector Motion Android prototype
 

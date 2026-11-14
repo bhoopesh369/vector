@@ -116,6 +116,9 @@ public final class SessionStore {
         catch(IOException|JSONException ignored){} // A cache write failure must not hide a readable session.
         return stats;
     }
+    public void markPreview(File csv)throws IOException {
+        synchronized(LOCK){try{JSONObject m=metadata(csv);m.put("source","bluetooth_preview").put("notes","Reduced-rate Bluetooth preview. Start recording on the watch and download it later for full-rate data.");atomicJson(sidecar(csv,".session.json"),m);}catch(JSONException e){throw new IOException(e);}}
+    }
     public File importWatch(File binary,long bytes,long crc,String id,String outcome)throws IOException {
         if(!id.matches("[0-9a-f]{16}"))throw new IOException("Invalid watch session identity");
         synchronized(LOCK){
@@ -130,7 +133,7 @@ public final class SessionStore {
                 WatchRecording.Header header=WatchRecording.importCsv(binary,staged,bytes,crc,id);
                 JSONObject m=new JSONObject().put("version",VERSION).put("sport",new String[]{"Badminton","Tennis","Running","Other"}[header.sport])
                     .put("wrist",header.wrist==0?"Right":"Left").put("markers",new JSONArray()).put("outcome",outcome)
-                    .put("source","watch").put("watchSessionId",id).put("watchCrc",crc).put("watchBytes",bytes)
+                    .put("qualityFinalized",header.qualityFinalized).put("fifoOverflows",header.fifoOverflows).put("sensorReadErrors",header.readErrors).put("queueDroppedSamples",header.queueDropped).put("nominalSensorHz",header.nominalHz).put("timestampMode",header.timingMode==1?"FIFO reconstructed within batches; host-anchored gaps":"host_read_time").put("source","watch").put("watchSessionId",id).put("watchCrc",crc).put("watchBytes",bytes)
                     .put("startedUtc",header.startedUnix>1577836800L&&header.startedUnix<4102444800L?Instant.ofEpochSecond(header.startedUnix).toString():Instant.now().toString())
                     .put("notes",header.startedUnix>1577836800L?"Imported from watch internal flash.":"Imported from watch. Watch clock was not set; displayed date is import time.");
                 atomicJson(sidecar(target,".session.json"),m);

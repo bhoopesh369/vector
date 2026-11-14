@@ -52,3 +52,25 @@ The user confirmed offline watch Start/Home/Stop saved a session. Real Bluetooth
 Long-duration battery, unplugged screen-off standalone recording, power-loss and simultaneous Wi-Fi/AI usage are not yet validated. USB boot logging can reset the watch, so do not open its serial port during a recording.
 
 Follow-up: battery-powered transfers intermittently stalled (first chunk and later inventory responses), then connection attempts failed. Restarting the watch through USB restored transfer; the cause remains unresolved. Verified imports after restart include 449 samples/4.239047s with no sequence gaps or clipping, and 8082 samples/75.977035s at106.36Hz with no sequence gaps,32.664ms maximum timestamp gap and3.39025% clipped samples. Both passed CRC/count verification and cancel/reconnect/resume checks. Successful USB-powered retry does not establish battery-only transfer reliability.
+
+## High-rate firmware (v0.5 companion)
+
+The watch now configures matched accelerometer and gyroscope ODR code2, nominal1793.6Hz, ±16g/±1024dps, LPF mode3. The sensor task drains a128-frame FIFO at a64-frame watermark using bounded CTRL9 handshakes and400kHz I2C, and queues complete batches in PSRAM for buffered storage. The configured sensor rate is not a guarantee of the saved rate. Watch recording displays the measured saved sample rate.
+
+Important QMI8658C constraint: FIFO read mode discards newly arriving sensor samples (manufacturer RevA section8.7). FIFO helps absorb scheduler delays but cannot make this shared-I2C board lossless. Within each batch, timestamps are reconstructed at the nominal sensor period; each batch is anchored to host time at FIFO-read entry. Real inter-batch pauses are retained. These are approximate batch-reconstructed timestamps, not individual hardware timestamps. Sequence gaps expose software queue loss; FIFO overflow/read errors are reported separately. Zero sequence gaps does not imply continuous hardware acquisition.
+
+Original26-byte archive frames and64-byte version1 header remain readable. Header float@48 stores nominalHz; byte14=1 marks FIFO reconstructed timestamps. Byte15=1 marks finalized quality; uint16LE values@58/@60/@62 store FIFO overflows/read errors/queue drops, saturated at65535. Interrupted files may lack finalized counters; their interruption status remains visible. Existing byte14=0 recordings retain their old host-read timestamp meaning.
+
+Live Bluetooth uses packet version2 (same layout), its own contiguous preview sequence and at most100Hz notifications (usually one latest reading per FIFO batch). A phone recording from this stream is explicitly a preview, not the full-rate watch archive. Record on the watch and download afterwards for all saved samples. Android0.5 accepts both old version1 and preview version2 packets, rejects preview packets inside raw archives, and preserves nominal rate/timing/quality in session metadata and ZIP exports.
+
+Optional derived export:
+
+```sh
+.venv/bin/python scripts/resample_1000.py recordings/raw.csv recordings/derived-1000hz.csv
+```
+
+This standard-library tool accepts only contiguous input genuinely faster than1000Hz. It uses a400Hz low-pass windowed-sinc filter, trims unsupported edges, and writes a separately labelled1000Hz CSV plus provenance sidecar. It refuses timestamp/sequence gaps and low-rate input; typical FIFO recordings with read pauses may therefore be unsuitable. It does not fill missing motion or turn100Hz recordings into real1kHz data. Raw recordings are never changed. No continuous1kHz or battery-life claim until verified on the actual device.
+
+First verified high-rate file (318368b180e98b47):42881 samples over44.859623s,955.87Hz saved average,87.029ms maximum timestamp gap, zero flagged FIFO overflows/read errors/queue drops and valid CRC. This demonstrates faster capture but not a sustained1000Hz saved rate. A follow-up build increases the stdio buffer to32KiB in PSRAM and flush/fsync interval to2s to reduce flash overhead; this can lose roughly the most recent two seconds of buffered data on sudden power loss. The subsequent recording rate needs separate measurement. Successful Stop flushes/fsyncs the file and finalized quality metadata.
+
+Post-optimization validation: recording7bcfb5a2eb89dc83 has4744 samples/4.772246s=993.87165Hz,86.930ms maximum gap; recordingecb2ab144c41d00e has6507 samples/6.386410s=1018.72570Hz,65.714ms maximum gap. Both imported with valid CRC/count, finalized quality, zero sequence gaps, FIFO overflows, sensor-read errors, queue drops and clipping. Transfer cancellation/resume and duplicate preservation passed. These short USB-powered tests establish approximately1k samples/s saved throughput, not uniform1ms sampling, continuous lossless acquisition or long-duration battery reliability. Phone remained locked, so this verification used the recording service and did not assert visible UI checks.

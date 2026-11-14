@@ -11,7 +11,10 @@ final class AnalysisScreen {
     AnalysisScreen(MainActivity host,SessionStore.Session session,List<MotionAnalytics.Sample> data){this.host=host;this.session=session;this.data=data;root=SportUi.column(host);
         SportUi.button(root,"← Sessions",false,()->host.navigate("Sessions"));SportUi.caption(root,SportUi.date(session));SportUi.heading(root,session.sport()+" / Analysis",28);
         SportUi.caption(root,session.wrist()+" wrist · "+session.outcome());if(!session.notes().isEmpty())SportUi.caption(root,session.notes());
+        if("bluetooth_preview".equals(session.metadata.optString("source")))SportUi.caption(root,"Reduced-rate Bluetooth preview — full-rate data is available only in the recording saved on the watch.");
         SportUi.caption(root,"All metrics use received samples at full resolution. Acceleration includes gravity.");
+        if(session.metadata.has("nominalSensorHz"))SportUi.caption(root,"Sensor configured: "+session.metadata.optDouble("nominalSensorHz")+" Hz. "+session.metadata.optString("timestampMode"));
+        if(session.metadata.optBoolean("qualityFinalized"))SportUi.caption(root,"FIFO overflows: "+session.metadata.optInt("fifoOverflows")+" · sensor read errors: "+session.metadata.optInt("sensorReadErrors")+" · queue drops: "+session.metadata.optInt("queueDroppedSamples"));
         summary=SportUi.column(host);root.addView(summary);
         LinearLayout ranges=SportUi.card(root);SportUi.heading(ranges,"Explore a time range",18);rangeText=SportUi.text(ranges,"Whole session",14,SportUi.MINT);rangeText.setTag("analysis-range");
         SportUi.caption(ranges,"Start");from=new SeekBar(host);from.setMax(1000);from.setTag("range-start");ranges.addView(from);

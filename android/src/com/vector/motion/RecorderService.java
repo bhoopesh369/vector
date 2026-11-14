@@ -193,13 +193,14 @@ public class RecorderService extends Service {
     }
     private void beginRecording() throws IOException {
         if(!ready || recording || syncBusy) return;
-        recordingName=currentSport.toLowerCase(Locale.US)+"-"+Instant.now().toString().replace(':','-')+".csv";
+        recordingName=currentSport.toLowerCase(Locale.US)+(latest!=null&&latest.preview?"-preview":"")+"-"+Instant.now().toString().replace(':','-')+".csv";
         File f=new File(new File(getFilesDir(),"recordings"),recordingName);
         if(!f.createNewFile()) throw new IOException("Recording filename already exists");
         writer=new BufferedWriter(new FileWriter(f));
         writer.write(MotionPacket.HEADER+"\n"); writer.flush();
         new File(f.getPath()+".active").createNewFile();
         sessions.create(f,currentSport,currentWrist);
+        if(latest!=null&&latest.preview)sessions.markPreview(f);
         count=missing=clipped=0; recordedSeconds=0; lastFlush=SystemClock.elapsedRealtime();
         recording=true; wake.acquire(); update("Recording "+currentSport+" • screen may be turned off");
     }
