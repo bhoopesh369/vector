@@ -1,0 +1,5 @@
+# Offline six-axis filtering and diagnostic plots; isolated from firmware tooling.
+numpy==2.5.4
+scipy==1.18.1
+matplotlib==3.11.2
+imageio-ffmpeg==0.6.0

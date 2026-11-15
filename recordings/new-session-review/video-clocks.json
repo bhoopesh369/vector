@@ -1,0 +1,323 @@
+[
+  {
+    "name": "IMG_3302.MOV",
+    "duration": 13.063333333333333,
+    "rawFrameCount": 1567,
+    "media": {
+      "creation": 3877518864,
+      "scale": 2400,
+      "duration": 31353
+    },
+    "movie": {
+      "creation": 3877518864,
+      "scale": 600,
+      "duration": 7838
+    },
+    "editSummary": [
+      {
+        "seconds": 13.063333333333333,
+        "mediaStart": 0,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794674064000,
+    "explicitCreationUtcMs": 1794674064000,
+    "timeScale": 2400,
+    "frameCount": 1567,
+    "averageFps": 119.95406991579485,
+    "clock": {
+      "utcMs": 1794674064000,
+      "basis": "explicit QuickTime creation date",
+      "confidence": "estimate",
+      "warning": "Calendar metadata is not a verified exposure-start clock."
+    },
+    "firstFrame": 0,
+    "lastFrame": 13.055416666666666
+  },
+  {
+    "name": "IMG_3303.MOV",
+    "duration": 55.096666666666664,
+    "rawFrameCount": 6609,
+    "media": {
+      "creation": 3877518897,
+      "scale": 2400,
+      "duration": 132235
+    },
+    "movie": {
+      "creation": 3877518897,
+      "scale": 600,
+      "duration": 33058
+    },
+    "editSummary": [
+      {
+        "seconds": 55.096666666666664,
+        "mediaStart": 0,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794674097000,
+    "explicitCreationUtcMs": 1794674097000,
+    "timeScale": 2400,
+    "frameCount": 6609,
+    "averageFps": 119.95281021235405,
+    "clock": {
+      "utcMs": 1794674097000,
+      "basis": "explicit QuickTime creation date",
+      "confidence": "estimate",
+      "warning": "Calendar metadata is not a verified exposure-start clock."
+    },
+    "firstFrame": 0,
+    "lastFrame": 55.08958333333333
+  },
+  {
+    "name": "IMG_3304.MOV",
+    "duration": 6.26,
+    "rawFrameCount": 751,
+    "media": {
+      "creation": 3877518991,
+      "scale": 2400,
+      "duration": 15026
+    },
+    "movie": {
+      "creation": 3877518991,
+      "scale": 600,
+      "duration": 3756
+    },
+    "editSummary": [
+      {
+        "seconds": 6.26,
+        "mediaStart": 0,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794674191000,
+    "explicitCreationUtcMs": 1794674191000,
+    "timeScale": 2400,
+    "frameCount": 751,
+    "averageFps": 119.96805111821087,
+    "clock": {
+      "utcMs": 1794674191000,
+      "basis": "explicit QuickTime creation date",
+      "confidence": "estimate",
+      "warning": "Calendar metadata is not a verified exposure-start clock."
+    },
+    "firstFrame": 0,
+    "lastFrame": 6.2525
+  },
+  {
+    "name": "VID20261115124504.mp4",
+    "duration": 66.2083,
+    "rawFrameCount": 1986,
+    "media": {
+      "creation": 3877571772,
+      "scale": 90000,
+      "duration": 5958746
+    },
+    "movie": {
+      "creation": 3877571772,
+      "scale": 10000,
+      "duration": 662083
+    },
+    "editSummary": [
+      {
+        "seconds": 66.1876,
+        "mediaStart": 19910,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794726972000,
+    "explicitCreationUtcMs": null,
+    "timeScale": 90000,
+    "frameCount": 1986,
+    "averageFps": 29.996239142222354,
+    "clock": {
+      "utcMs": 1794726904000,
+      "basis": "Android filename start · +05:30",
+      "confidence": "estimate",
+      "endTagged": true,
+      "warning": "Creation tag matches recording end (1.79 s from filename + duration). Using filename start; allow seconds of uncertainty."
+    },
+    "firstFrame": 0.020700000000000024,
+    "lastFrame": 66.17483333333332
+  },
+  {
+    "name": "VID20261115124633.mp4",
+    "duration": 291.4537,
+    "rawFrameCount": 8741,
+    "media": {
+      "creation": 3877572085,
+      "scale": 90000,
+      "duration": 26218082
+    },
+    "movie": {
+      "creation": 3877572085,
+      "scale": 10000,
+      "duration": 2914537
+    },
+    "editSummary": [
+      {
+        "seconds": 291.312,
+        "mediaStart": 21173,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794727285000,
+    "explicitCreationUtcMs": null,
+    "timeScale": 90000,
+    "frameCount": 8741,
+    "averageFps": 29.991041458729118,
+    "clock": {
+      "utcMs": 1794726993000,
+      "basis": "Android filename start · +05:30",
+      "confidence": "estimate",
+      "endTagged": true,
+      "warning": "Creation tag matches recording end (0.55 s from filename + duration). Using filename start; allow seconds of uncertainty."
+    },
+    "firstFrame": 0,
+    "lastFrame": 291.27858888888886
+  },
+  {
+    "name": "VID20261115131230.mp4",
+    "duration": 362.9153,
+    "rawFrameCount": 17879,
+    "media": {
+      "creation": 3877573714,
+      "scale": 90000,
+      "duration": 32662375
+    },
+    "movie": {
+      "creation": 3877573714,
+      "scale": 10000,
+      "duration": 3629153
+    },
+    "editSummary": [
+      {
+        "seconds": 362.9153,
+        "mediaStart": 21023,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794728914000,
+    "explicitCreationUtcMs": null,
+    "timeScale": 90000,
+    "frameCount": 17879,
+    "averageFps": 49.26493867852912,
+    "clock": {
+      "utcMs": 1794728550000,
+      "basis": "Android filename start · +05:30",
+      "confidence": "estimate",
+      "endTagged": true,
+      "warning": "Creation tag matches recording end (1.08 s from filename + duration). Using filename start; allow seconds of uncertainty."
+    },
+    "firstFrame": 0,
+    "lastFrame": 362.89862222222223
+  },
+  {
+    "name": "VID20261115132007.mp4",
+    "duration": 204.3093,
+    "rawFrameCount": 6127,
+    "media": {
+      "creation": 3877574012,
+      "scale": 90000,
+      "duration": 18379317
+    },
+    "movie": {
+      "creation": 3877574012,
+      "scale": 10000,
+      "duration": 2043093
+    },
+    "editSummary": [
+      {
+        "seconds": 204.1951,
+        "mediaStart": 19261,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794729212000,
+    "explicitCreationUtcMs": null,
+    "timeScale": 90000,
+    "frameCount": 6127,
+    "averageFps": 29.988845343799817,
+    "clock": {
+      "utcMs": 1794729007000,
+      "basis": "Android filename start · +05:30",
+      "confidence": "estimate",
+      "endTagged": true,
+      "warning": "Creation tag matches recording end (0.69 s from filename + duration). Using filename start; allow seconds of uncertainty."
+    },
+    "firstFrame": 0.019577777777777777,
+    "lastFrame": 204.1813111111111
+  },
+  {
+    "name": "VID20261115132421.mp4",
+    "duration": 12.16,
+    "rawFrameCount": 362,
+    "media": {
+      "creation": 3877574074,
+      "scale": 90000,
+      "duration": 1085935
+    },
+    "movie": {
+      "creation": 3877574074,
+      "scale": 10000,
+      "duration": 121600
+    },
+    "editSummary": [
+      {
+        "seconds": 12.0644,
+        "mediaStart": 20885,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794729274000,
+    "explicitCreationUtcMs": null,
+    "timeScale": 90000,
+    "frameCount": 362,
+    "averageFps": 29.769736842105264,
+    "clock": {
+      "utcMs": 1794729261000,
+      "basis": "Android filename start · +05:30",
+      "confidence": "estimate",
+      "endTagged": true,
+      "warning": "Creation tag matches recording end (0.84 s from filename + duration). Using filename start; allow seconds of uncertainty."
+    },
+    "firstFrame": 0.0015333333333333588,
+    "lastFrame": 12.032533333333333
+  },
+  {
+    "name": "VID20261115132437.mp4",
+    "duration": 296,
+    "rawFrameCount": 8879,
+    "media": {
+      "creation": 3877574374,
+      "scale": 90000,
+      "duration": 26632472
+    },
+    "movie": {
+      "creation": 3877574374,
+      "scale": 10000,
+      "duration": 2960000
+    },
+    "editSummary": [
+      {
+        "seconds": 295.9112,
+        "mediaStart": 20557,
+        "rate": 1
+      }
+    ],
+    "creationUtcMs": 1794729574000,
+    "explicitCreationUtcMs": null,
+    "timeScale": 90000,
+    "frameCount": 8879,
+    "averageFps": 29.99662162162162,
+    "clock": {
+      "utcMs": 1794729277000,
+      "basis": "Android filename start · +05:30",
+      "confidence": "estimate",
+      "endTagged": true,
+      "warning": "Creation tag matches recording end (1.00 s from filename + duration). Using filename start; allow seconds of uncertainty."
+    },
+    "firstFrame": 0.005177777777777781,
+    "lastFrame": 295.8830222222222
+  }
+]

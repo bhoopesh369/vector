@@ -3,7 +3,17 @@
 .cache/
 .venv/
 backups/
-recordings/
 build/
 __pycache__/
 .DS_Store
+
+# Recordings stay local; publish CSVs, metadata and review reports only.
+/samples/videos/
+/recordings/**/*.png
+/recordings/**/*.jpg
+/recordings/**/*.npz
+/samples/*.textClipping
+*.mp4
+*.MP4
+*.mov
+*.MOV

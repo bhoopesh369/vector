@@ -1,0 +1,2 @@
+# Preserve exported CSV line endings without flagging CRLF as trailing whitespace.
+*.csv whitespace=cr-at-eol

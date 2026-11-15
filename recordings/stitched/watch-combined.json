@@ -1,0 +1,24 @@
+{
+  "clock": "original t_us, assumed shared watch boot; no wall-clock rebasing",
+  "origin_t_us": 1418928394,
+  "rows": 84281,
+  "duration_s": 107.111673,
+  "sessions": [
+    {
+      "source": "samples/watch-3e23360e5c8d89d3/watch-3e23360e5c8d89d3.csv",
+      "session_id": "watch-3e23360e5c8d89d3",
+      "start_s": 0.0,
+      "end_s": 67.986941,
+      "gap_from_previous_s": 0,
+      "rows": 68435
+    },
+    {
+      "source": "samples/watch-8017f15ecd91ee46/watch-8017f15ecd91ee46.csv",
+      "session_id": "watch-8017f15ecd91ee46",
+      "start_s": 91.377595,
+      "end_s": 107.111673,
+      "gap_from_previous_s": 23.390654,
+      "rows": 15846
+    }
+  ]
+}

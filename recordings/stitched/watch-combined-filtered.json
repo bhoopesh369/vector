@@ -1,0 +1,31 @@
+{
+  "rows": 84281,
+  "duration_s": 107.111673,
+  "average_recorded_hz": 786.8423453716384,
+  "median_sample_hz": 1792.1146953467323,
+  "cutoff_hz": 40.0,
+  "filter": "Butterworth order 4, forward/backward SOS",
+  "gap_count": 913,
+  "max_interval_s": 23.390653999999998,
+  "short_unfiltered_segments_row_ranges": [],
+  "gyro_bias_dps": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "stationary_calibration": null,
+  "limitations": [
+    "No accelerometer bias calibration or gravity subtraction.",
+    "No absolute heading, position, or temperature drift correction.",
+    "No interpolation across detected gaps; edge effects remain near segment boundaries.",
+    "Bias is constant and only valid if the supplied interval was stationary."
+  ],
+  "source": "recordings/stitched/watch-combined.csv",
+  "stationary_candidates_s": [
+    [
+      65.25,
+      66.0
+    ]
+  ],
+  "clipped_rows": 673
+}

@@ -1,0 +1,45 @@
+{
+  "rows": 15846,
+  "duration_s": 15.734078,
+  "average_recorded_hz": 1007.0497934483355,
+  "median_sample_hz": 1792.1146953410273,
+  "cutoff_hz": 40.0,
+  "filter": "Butterworth order 4, forward/backward SOS",
+  "gap_count": 171,
+  "max_interval_s": 0.09448100000000004,
+  "short_unfiltered_segments_row_ranges": [],
+  "gyro_bias_dps": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "stationary_calibration": null,
+  "limitations": [
+    "No accelerometer bias calibration or gravity subtraction.",
+    "No absolute heading, position, or temperature drift correction.",
+    "No interpolation across detected gaps; edge effects remain near segment boundaries.",
+    "Bias is constant and only valid if the supplied interval was stationary."
+  ],
+  "source": "samples/watch-8017f15ecd91ee46/watch-8017f15ecd91ee46.csv",
+  "source_session_metadata": {
+    "version": 1,
+    "sport": "Other",
+    "wrist": "Right",
+    "markers": [],
+    "outcome": "Stopped",
+    "qualityFinalized": true,
+    "fifoOverflows": 0,
+    "sensorReadErrors": 0,
+    "queueDroppedSamples": 0,
+    "nominalSensorHz": 1793.5999755859375,
+    "timestampMode": "FIFO reconstructed within batches; host-anchored gaps",
+    "source": "watch",
+    "watchSessionId": "8017f15ecd91ee46",
+    "watchCrc": 1926608378,
+    "watchBytes": 412060,
+    "startedUtc": "2026-11-14T16:36:27Z",
+    "notes": "Imported from watch internal flash."
+  },
+  "stationary_candidates_s": [],
+  "clipped_rows": 277
+}

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "recording_key": "[\"watch-combined-filtered.csv\",84281,1418928394,107.11167299999988,[0.160968428,0.0031256044,-0.975906293,-6.40397337,4.06777277,1.57365432],[-0.142560891,0.299496018,-0.894543402,-14.7542583,27.6051179,-13.2759472]]",
+  "recording_name": "watch-combined-filtered.csv",
+  "markers": [
+    {
+      "id": "7b8ad527-d17d-470c-88de-99455065a6e4",
+      "kind": "uncertain",
+      "label": "QA marker - imported",
+      "notes": "Temporary JSON import check; not training ground truth.",
+      "anchor": {
+        "type": "video",
+        "video_key": "samples/videos/IMG_3303.MOV",
+        "video_name": "IMG_3303.MOV",
+        "video_s": 1.267083,
+        "frame_index": 152,
+        "timing_source": "presented-frame"
+      },
+      "alignment_at_creation": {
+        "offset": -0.9,
+        "scale": 1
+      }
+    }
+  ],
+  "cameras": {
+    "samples/videos/IMG_3302.MOV": {
+      "offset": 32.1,
+      "scale": 1,
+      "enabled": false,
+      "anchors": []
+    },
+    "samples/videos/IMG_3303.MOV": {
+      "offset": -0.9,
+      "scale": 1,
+      "enabled": true,
+      "anchors": []
+    },
+    "samples/videos/IMG_3304.MOV": {
+      "offset": -95.377595,
+      "scale": 1,
+      "enabled": true,
+      "anchors": []
+    }
+  }
+}

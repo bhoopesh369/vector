@@ -1,0 +1,88 @@
+{
+  "videos": [
+    {
+      "name": "IMG_3302.MOV",
+      "creation_time_utc": "2026-11-14T16:34:24.000000Z",
+      "time_base": "1/2400",
+      "frame_count": 1567,
+      "decoded_frame_count": 1567,
+      "first_pts_s": 0.0,
+      "last_pts_s": 13.055416666666666,
+      "presentation_end_s": 13.063749999999999,
+      "interval_tick_histogram": {
+        "20": 1553,
+        "21": 13
+      },
+      "min_interval_s": 0.008333333333333333,
+      "max_interval_s": 0.00875,
+      "frame_table": "recordings/timing-audit/IMG_3302-frames.csv",
+      "frame_json": "recordings/timing-audit/IMG_3302-frames.json"
+    },
+    {
+      "name": "IMG_3303.MOV",
+      "creation_time_utc": "2026-11-14T16:34:57.000000Z",
+      "time_base": "1/2400",
+      "frame_count": 6609,
+      "decoded_frame_count": 6609,
+      "first_pts_s": 0.0,
+      "last_pts_s": 55.08958333333333,
+      "presentation_end_s": 55.09791666666666,
+      "interval_tick_histogram": {
+        "19": 9,
+        "20": 6535,
+        "21": 64
+      },
+      "min_interval_s": 0.007916666666666667,
+      "max_interval_s": 0.00875,
+      "frame_table": "recordings/timing-audit/IMG_3303-frames.csv",
+      "frame_json": "recordings/timing-audit/IMG_3303-frames.json"
+    },
+    {
+      "name": "IMG_3304.MOV",
+      "creation_time_utc": "2026-11-14T16:36:31.000000Z",
+      "time_base": "1/2400",
+      "frame_count": 751,
+      "decoded_frame_count": 751,
+      "first_pts_s": 0.0,
+      "last_pts_s": 6.2525,
+      "presentation_end_s": 6.260833333333334,
+      "interval_tick_histogram": {
+        "20": 744,
+        "21": 6
+      },
+      "min_interval_s": 0.008333333333333333,
+      "max_interval_s": 0.00875,
+      "frame_table": "recordings/timing-audit/IMG_3304-frames.csv",
+      "frame_json": "recordings/timing-audit/IMG_3304-frames.json"
+    }
+  ],
+  "watch_sessions": [
+    {
+      "name": "watch-3e23360e5c8d89d3",
+      "rows": 68435,
+      "first_t_us": 1418928394,
+      "last_t_us": 1486915335,
+      "started_utc_metadata": "2026-11-14T16:34:55Z",
+      "timestamp_mode": "FIFO reconstructed within batches; host-anchored gaps",
+      "implied_boot_utc_if_started_equals_first_sample": "2026-11-14T16:11:16.071606+00:00",
+      "metadata_precision": "whole-second recording-start time; bootStartUs not included in supplied CSV/session exports"
+    },
+    {
+      "name": "watch-8017f15ecd91ee46",
+      "rows": 15846,
+      "first_t_us": 1510305989,
+      "last_t_us": 1526040067,
+      "started_utc_metadata": "2026-11-14T16:36:27Z",
+      "timestamp_mode": "FIFO reconstructed within batches; host-anchored gaps",
+      "implied_boot_utc_if_started_equals_first_sample": "2026-11-14T16:11:16.694011+00:00",
+      "metadata_precision": "whole-second recording-start time; bootStartUs not included in supplied CSV/session exports"
+    }
+  ],
+  "verification": {
+    "video": "Actual encoded-packet PTS and DTS extracted by stream copy, sorted by PTS; not frame index / nominal fps.",
+    "exposure_start": "Not established. PTS is a presentation timestamp, not proof of the physical exposure start or exact UTC capture time. Apple timed metadata tracks were not decoded.",
+    "watch": "Verified current source: QMI FIFO samples use the processor uptime clock, reconstructed inside batches at nominal 1793.6 Hz and anchored to host time. See high_rate.hpp and motion_service.cpp.",
+    "utc_mapping": "Verified source: startedUtc comes from the watch archive header startedUnix (whole Unix seconds at recording start), with Android import-time fallback when unset. This is not the first sample timestamp. CSV/session exports omit bootStartUs, and BLE clock-setting latency is unmeasured, so exact first-sample UTC is not established."
+  },
+  "implied_boot_disagreement_ms": 622.405
+}

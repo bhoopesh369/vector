@@ -1,0 +1,576 @@
+[
+  {
+    "name": "badminton-fullrate-2026-11-15T06-27-50.049168Z.csv",
+    "rows": 17029,
+    "duration_seconds": 14.483683,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1175.6678187447212,
+    "max_gap_ms": 20.358999999999998,
+    "gaps_over_20ms": 64,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 0,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -1.529,
+        1.037
+      ],
+      "ay_g": [
+        -1.805,
+        0.763
+      ],
+      "az_g": [
+        -3.762,
+        0.103
+      ],
+      "gx_dps": [
+        -250.625,
+        189.5625
+      ],
+      "gy_dps": [
+        -398.375,
+        286.8125
+      ],
+      "gz_dps": [
+        -261.75,
+        333.1875
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-02-10.465701Z.csv",
+    "rows": 4997,
+    "duration_seconds": 4.23624,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1179.3477234528734,
+    "max_gap_ms": 20.322,
+    "gaps_over_20ms": 19,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 0,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -0.465,
+        -0.265
+      ],
+      "ay_g": [
+        0.922,
+        1.016
+      ],
+      "az_g": [
+        -0.348,
+        -0.208
+      ],
+      "gx_dps": [
+        -9.75,
+        5.375
+      ],
+      "gy_dps": [
+        -27.5625,
+        20.75
+      ],
+      "gz_dps": [
+        -10.75,
+        5.1875
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-02-18.538741Z.csv",
+    "rows": 364969,
+    "duration_seconds": 310.836241,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.1488020375334,
+    "max_gap_ms": 20.372999999999998,
+    "gaps_over_20ms": 1398,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 1989,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -16.0,
+        16.0
+      ],
+      "ay_g": [
+        -3.388,
+        16.0
+      ],
+      "az_g": [
+        -7.973,
+        16.0
+      ],
+      "gx_dps": [
+        -1024.0,
+        1018.25
+      ],
+      "gy_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gz_dps": [
+        -830.3125,
+        1024.0
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-07-53.193843Z.csv",
+    "rows": 67787,
+    "duration_seconds": 57.715682,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.481486678092,
+    "max_gap_ms": 20.378,
+    "gaps_over_20ms": 258,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 42,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Disconnected by user",
+    "axis_ranges": {
+      "ax_g": [
+        -10.266,
+        5.787
+      ],
+      "ay_g": [
+        -1.451,
+        11.973
+      ],
+      "az_g": [
+        -7.688,
+        13.481
+      ],
+      "gx_dps": [
+        -808.6875,
+        779.375
+      ],
+      "gy_dps": [
+        -1024.0,
+        995.9375
+      ],
+      "gz_dps": [
+        -447.625,
+        788.625
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-15-03.256781Z.csv",
+    "rows": 35127,
+    "duration_seconds": 29.913355,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.258119826412,
+    "max_gap_ms": 20.759,
+    "gaps_over_20ms": 134,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 107,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Interrupted: full-rate Bluetooth queue overflow; reconnect",
+    "axis_ranges": {
+      "ax_g": [
+        -6.851,
+        8.688
+      ],
+      "ay_g": [
+        -13.816,
+        0.986
+      ],
+      "az_g": [
+        -5.424,
+        7.842
+      ],
+      "gx_dps": [
+        -394.5625,
+        1024.0
+      ],
+      "gy_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gz_dps": [
+        -929.4375,
+        614.8125
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-16-31.702627Z.csv",
+    "rows": 51429,
+    "duration_seconds": 43.799244,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.1755177326804,
+    "max_gap_ms": 20.374,
+    "gaps_over_20ms": 197,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 110,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Interrupted: full-rate Bluetooth queue overflow; reconnect",
+    "axis_ranges": {
+      "ax_g": [
+        -11.389,
+        13.466
+      ],
+      "ay_g": [
+        -11.174,
+        2.191
+      ],
+      "az_g": [
+        -8.628,
+        16.0
+      ],
+      "gx_dps": [
+        -447.8125,
+        1024.0
+      ],
+      "gy_dps": [
+        -734.25,
+        1024.0
+      ],
+      "gz_dps": [
+        -631.1875,
+        620.75
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-42-29.347660Z.csv",
+    "rows": 419670,
+    "duration_seconds": 357.416642,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.1730817335583,
+    "max_gap_ms": 20.752,
+    "gaps_over_20ms": 1589,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 1445,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -11.384,
+        13.105
+      ],
+      "ay_g": [
+        -16.0,
+        3.437
+      ],
+      "az_g": [
+        -16.0,
+        16.0
+      ],
+      "gx_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gy_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gz_dps": [
+        -1024.0,
+        1024.0
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-50-05.732992Z.csv",
+    "rows": 232100,
+    "duration_seconds": 197.661778,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.222969905694,
+    "max_gap_ms": 20.866,
+    "gaps_over_20ms": 881,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 1772,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Disconnected by user",
+    "axis_ranges": {
+      "ax_g": [
+        -11.953,
+        12.583
+      ],
+      "ay_g": [
+        -16.0,
+        2.787
+      ],
+      "az_g": [
+        -15.13,
+        16.0
+      ],
+      "gx_dps": [
+        -900.5,
+        1024.0
+      ],
+      "gy_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gz_dps": [
+        -1024.0,
+        1024.0
+      ]
+    }
+  },
+  {
+    "name": "badminton-fullrate-2026-11-15T07-54-35.976480Z.csv",
+    "rows": 339057,
+    "duration_seconds": 288.768204,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.1458903834161,
+    "max_gap_ms": 20.763,
+    "gaps_over_20ms": 1298,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 2790,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -16.0,
+        16.0
+      ],
+      "ay_g": [
+        -16.0,
+        16.0
+      ],
+      "az_g": [
+        -14.839,
+        16.0
+      ],
+      "gx_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gy_dps": [
+        -1024.0,
+        1024.0
+      ],
+      "gz_dps": [
+        -1024.0,
+        1024.0
+      ]
+    }
+  },
+  {
+    "name": "other-fullrate-2026-11-14T23-17-05.579358Z.csv",
+    "rows": 36701,
+    "duration_seconds": 31.233776,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1175.0100276060123,
+    "max_gap_ms": 20.325,
+    "gaps_over_20ms": 138,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 0,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "boot relative / undeclared",
+    "clock_source": "undeclared",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -0.994,
+        1.066
+      ],
+      "ay_g": [
+        -2.236,
+        1.853
+      ],
+      "az_g": [
+        -2.75,
+        0.458
+      ],
+      "gx_dps": [
+        -211.0,
+        260.75
+      ],
+      "gy_dps": [
+        -458.8125,
+        418.875
+      ],
+      "gz_dps": [
+        -270.0625,
+        218.1875
+      ]
+    }
+  },
+  {
+    "name": "other-fullrate-2026-11-14T23-27-43.534546Z.csv",
+    "rows": 37223,
+    "duration_seconds": 31.679667,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.949219005364,
+    "max_gap_ms": 20.331,
+    "gaps_over_20ms": 140,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 0,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -0.598,
+        0.794
+      ],
+      "ay_g": [
+        -1.597,
+        1.978
+      ],
+      "az_g": [
+        -2.704,
+        2.387
+      ],
+      "gx_dps": [
+        -162.0,
+        114.8125
+      ],
+      "gy_dps": [
+        -214.6875,
+        147.25
+      ],
+      "gz_dps": [
+        -198.6875,
+        223.625
+      ]
+    }
+  },
+  {
+    "name": "running-fullrate-2026-11-15T07-30-14.120006Z.csv",
+    "rows": 99419,
+    "duration_seconds": 84.652241,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.4284477950205,
+    "max_gap_ms": 20.36,
+    "gaps_over_20ms": 373,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 0,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -2.041,
+        2.437
+      ],
+      "ay_g": [
+        -1.669,
+        3.594
+      ],
+      "az_g": [
+        -1.175,
+        1.403
+      ],
+      "gx_dps": [
+        -394.6875,
+        467.9375
+      ],
+      "gy_dps": [
+        -741.375,
+        618.375
+      ],
+      "gz_dps": [
+        -488.5,
+        551.125
+      ]
+    }
+  },
+  {
+    "name": "running-fullrate-2026-11-15T07-32-22.260284Z.csv",
+    "rows": 107641,
+    "duration_seconds": 91.65324,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.4265669167833,
+    "max_gap_ms": 20.357,
+    "gaps_over_20ms": 403,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 0,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -1.385,
+        0.298
+      ],
+      "ay_g": [
+        -0.379,
+        2.559
+      ],
+      "az_g": [
+        -1.086,
+        1.06
+      ],
+      "gx_dps": [
+        -192.625,
+        235.3125
+      ],
+      "gy_dps": [
+        -462.4375,
+        380.125
+      ],
+      "gz_dps": [
+        -310.0625,
+        287.625
+      ]
+    }
+  },
+  {
+    "name": "running-fullrate-2026-11-15T07-37-19.437255Z.csv",
+    "rows": 128811,
+    "duration_seconds": 109.68368,
+    "local_interval_median_us": 558.0,
+    "average_saved_hz": 1174.37708144001,
+    "max_gap_ms": 20.382,
+    "gaps_over_20ms": 482,
+    "strict_timestamps": true,
+    "metadata_clipped_samples": 1101,
+    "metadata_missing_sequences": 0,
+    "timestamp_unit": "unix_microseconds",
+    "clock_source": "phone_ble_receive_estimate",
+    "outcome": "Stopped by user",
+    "axis_ranges": {
+      "ax_g": [
+        -16.0,
+        3.273
+      ],
+      "ay_g": [
+        -16.0,
+        4.912
+      ],
+      "az_g": [
+        -7.919,
+        16.0
+      ],
+      "gx_dps": [
+        -1022.625,
+        681.75
+      ],
+      "gy_dps": [
+        -1024.0,
+        1008.3125
+      ],
+      "gz_dps": [
+        -1024.0,
+        898.9375
+      ]
+    }
+  }
+]

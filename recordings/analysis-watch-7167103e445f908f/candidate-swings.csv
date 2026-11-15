@@ -1,0 +1,18 @@
+candidate,time_from_start_s,smoothed_accel_magnitude_g,local_raw_accel_max_g,local_raw_gyro_max_dps,local_clipped_rows,label
+1,7.55,18.49,23.44,1773.6,86,unclassified swing candidate
+2,10.61,11.18,14.48,1614.4,80,unclassified swing candidate
+3,16.95,16.19,21.98,1597.5,194,unclassified swing candidate
+4,18.48,19.46,26.82,1773.6,137,unclassified swing candidate
+5,20.52,10.52,12.35,1364.8,69,unclassified swing candidate
+6,21.62,7.7,11.68,1594.0,71,unclassified swing candidate
+7,23.96,12.94,18.31,1632.7,129,unclassified swing candidate
+8,24.67,6.28,6.98,1179.0,99,unclassified swing candidate
+9,25.79,18.2,27.02,1773.6,148,unclassified swing candidate
+10,26.57,4.02,4.37,1067.2,54,unclassified swing candidate
+11,27.32,16.01,19.86,1690.9,154,unclassified swing candidate
+12,29.16,14.51,18.25,1503.6,144,unclassified swing candidate
+13,30.56,15.4,19.57,1498.4,123,unclassified swing candidate
+14,33.86,13.25,17.74,1508.9,89,unclassified swing candidate
+15,35.47,12.69,17.43,1524.0,133,unclassified swing candidate
+16,37.28,11.51,17.93,1624.3,124,unclassified swing candidate
+17,38.2,16.38,22.67,1746.8,165,unclassified swing candidate
