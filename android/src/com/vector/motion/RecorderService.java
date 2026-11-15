@@ -33,7 +33,8 @@ public class RecorderService extends Service {
     private MotionPacket previous;
     private SessionStore sessions;
     private WatchSync sync;
-    public volatile boolean syncAvailable,syncBusy;
+    public volatile boolean syncAvailable,syncBusy,watchDisplaySupported,watchDisplayDimmed;
+    public volatile String watchDisplayError="";
     public volatile String syncStatus="Connect the watch to see saved sessions", lastImported="";
     public volatile List<WatchSync.Item> watchSessions=Collections.emptyList();
     public volatile String currentSport="Badminton", currentWrist="Right";
@@ -74,6 +75,7 @@ public class RecorderService extends Service {
                     String label=intent.getStringExtra("label");
                     if(label!=null && !label.trim().isEmpty())sessions.marker(new File(sessions.directory,recordingName),label.trim(),recordingEpochUs+(latest.micros-recordingFirstUs));
                 }
+                else if("WATCH_DISPLAY".equals(action)) {if(sync!=null)sync.toggleDisplay();}
                 else if("WATCH_LIST".equals(action)) {if(sync!=null&&!recording)sync.list();}
                 else if("WATCH_GET".equals(action)) {if(sync!=null&&!recording)sync.download(intent.getStringExtra("id"));}
                 else if("CANCEL_SYNC".equals(action)) shutdown("Transfer cancelled; reconnect to resume");
@@ -141,6 +143,9 @@ public class RecorderService extends Service {
             if(service!=null){
                 sync=new WatchSync(g,service,work,sessions,(available,busy,text,items,imported)->{
                     boolean wasBusy=syncBusy;syncAvailable=available;syncBusy=busy;if(wasBusy&&!busy)lastData=SystemClock.elapsedRealtime();syncStatus=text;watchSessions=items;
+                    watchDisplaySupported=available&&sync!=null&&sync.displaySupported;
+                    watchDisplayDimmed=watchDisplaySupported&&sync.displayDimmed;
+                    watchDisplayError=watchDisplaySupported?sync.displayError:"";
                     if(!imported.isEmpty())lastImported=imported;
                     if(busy&&!wake.isHeld())wake.acquire();else if(!busy&&!recording&&wake.isHeld())wake.release();
                     if(active&&busy)getSystemService(NotificationManager.class).notify(1,notification(text));

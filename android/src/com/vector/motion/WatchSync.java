@@ -23,11 +23,20 @@ public final class WatchSync {
     public interface Listener{void changed(boolean available,boolean busy,String message,List<Item> items,String imported);}
     private final BluetoothGatt gatt;private final BluetoothGattCharacteristic control,data;private final Handler work;private final SessionStore store;private final Listener listener;
     private final ArrayList<Item> items=new ArrayList<>();private boolean available,enabled=true,busy,writeDone,chunkDone;private String operation="";private int index;
+    boolean displaySupported, displayDimmed;
+    String displayError="";
     private Item download;private RandomAccessFile partial;private File partialPath;private long offset;
     WatchSync(BluetoothGatt g,BluetoothGattService service,Handler worker,SessionStore store,Listener listener){gatt=g;control=service.getCharacteristic(CONTROL);data=service.getCharacteristic(FILE);work=worker;this.store=store;this.listener=listener;}
     boolean supported(){return control!=null&&data!=null&&data.getDescriptor(CCC)!=null;}
     boolean subscribe(){if(!supported()||!gatt.setCharacteristicNotification(data,true))return false;BluetoothGattDescriptor c=data.getDescriptor(CCC);c.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);return gatt.writeDescriptor(c);}
     void subscribed(int status){if(status!=0){fail("Could not enable watch transfers");return;}available=true;busy=true;state("Synchronizing watch clock…","");send("TIME "+System.currentTimeMillis()/1000);}
+    void toggleDisplay(){
+        if(!available||busy||!displaySupported)return;
+        busy=true;
+        displayError="";
+        state("Updating watch display…","");
+        send(displayDimmed?"DISPLAY RESTORE":"DISPLAY DIM");
+    }
     public void list(){if(!available||busy)return;busy=true;items.clear();index=0;state("Reading watch recordings…","");send("LIST 0");}
     public void download(String id){if(!available||busy)return;Item chosen=null;for(Item item:items)if(item.id.equals(id))chosen=item;if(chosen==null){state("Refresh watch recordings first","");return;}
         try {
@@ -47,7 +56,18 @@ public final class WatchSync {
     void read(byte[] bytes,int status){if(!enabled||!busy)return;work.removeCallbacks(timeout);
         try{if(status!=0)throw new IOException("Could not read watch response");JSONObject response=new JSONObject(new String(bytes,StandardCharsets.UTF_8));String kind=response.optString("kind");
             if(kind.equals("error"))throw new IOException(response.optString("message","Watch transfer failed"));
-            if(operation.startsWith("TIME ")){if(!kind.equals("time"))throw new IOException("Unexpected watch clock response");items.clear();index=0;send("LIST 0");}
+            if(operation.startsWith("TIME ")){
+                if(!kind.equals("time"))throw new IOException("Unexpected watch clock response");
+                displaySupported=response.has("display_dimmed");
+                if(displaySupported)displayDimmed=response.getBoolean("display_dimmed");
+                items.clear();index=0;send("LIST 0");
+            }
+            else if(operation.startsWith("DISPLAY ")){
+                if(!kind.equals("display"))throw new IOException("Unexpected watch display response");
+                displayDimmed=response.getBoolean("dimmed");
+                busy=false;operation="";
+                state(displayDimmed?"Watch display dimmed":"Watch brightness restored","");
+            }
             else if(operation.startsWith("LIST ")){if(kind.equals("end")){busy=false;operation="";state(items.size()+" watch recordings available","");}else if(kind.equals("item")){if(index>=512)throw new IOException("Too many watch recordings");Item item=new Item(response);for(Item prior:items)if(prior.id.equals(item.id))throw new IOException("Duplicate watch inventory identity");items.add(item);send("LIST "+(++index));}else throw new IOException("Unexpected watch inventory response");}
             else if(operation.startsWith("GET ")){if(!kind.equals("ready"))throw new IOException("Watch recording unavailable");next();}
             else if(operation.equals("CLOSE")){if(!kind.equals("closed"))throw new IOException("Could not close watch transfer");finish();}
@@ -68,7 +88,9 @@ public final class WatchSync {
     private void finish(){try{partial.getFD().sync();partial.close();partial=null;state("Verifying and importing watch session…","");File imported=store.importWatch(partialPath,download.bytes,download.crc,download.id,download.outcome);partialPath.delete();download=null;busy=false;operation="";state("Imported—open Sessions to review",imported.getName());}
         catch(Exception e){if(partialPath!=null&&e instanceof WatchRecording.InvalidRecording)partialPath.delete();fail(e.getMessage());}}
     private void arm(){work.removeCallbacks(timeout);work.postDelayed(timeout,8000);}
-    private final Runnable timeout=()->{android.util.Log.w("VectorWatchSync","Timeout operation="+operation+" offset="+offset+" writeDone="+writeDone+" chunkDone="+chunkDone);fail("Watch transfer timed out. Reconnect and download again to resume.");};
-    private void fail(String message){work.removeCallbacks(timeout);try{if(partial!=null)partial.close();}catch(IOException ignored){}partial=null;download=null;busy=false;operation="";state(message==null?"Watch transfer failed":message,"");}
+    private final Runnable timeout=()->{android.util.Log.w("VectorWatchSync","Timeout operation="+operation+" offset="+offset+" writeDone="+writeDone+" chunkDone="+chunkDone);fail(operation.startsWith("DISPLAY ") ? "Watch display did not respond. Reconnect to refresh its state." : "Watch transfer timed out. Reconnect and download again to resume.");};
+    private void fail(String message){
+        if(operation.startsWith("DISPLAY "))displayError=message==null?"Watch display command failed":message;
+        work.removeCallbacks(timeout);try{if(partial!=null)partial.close();}catch(IOException ignored){}partial=null;download=null;busy=false;operation="";state(message==null?"Watch transfer failed":message,"");}
     void close(){enabled=false;available=false;work.removeCallbacks(timeout);try{if(partial!=null)partial.close();}catch(IOException ignored){}partial=null;download=null;busy=false;state("Watch disconnected—partial downloads can resume","");}
 }

@@ -78,31 +78,11 @@ public class MainActivity extends Activity {
     @Override protected void onDestroy(){destroyed=true;generation++;handler.removeCallbacksAndMessages(null);io.shutdown();super.onDestroy();}
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("tab",tab);out.putBoolean("watchPage",watchPage);out.putInt("sport",sportIndex);out.putInt("wrist",wristIndex);out.putInt("filterSport",filterSport);out.putInt("filterDate",filterDate);out.putStringArray("compare",comparing.toArray(new String[0]));out.putString("detail",restoreDetail);
         if(exportFile!=null)out.putString("export",exportFile.getPath());out.putBoolean("exportZip",exportZip);}
-    private boolean displayDimmed;
-    private final Runnable tick=new Runnable(){public void run(){if(!displayDimmed)update();handler.postDelayed(this,250);}};
+    private final Runnable tick=new Runnable(){public void run(){update();handler.postDelayed(this,250);}};
     private void update(){if(screenObject instanceof WatchScreen)((WatchScreen)screenObject).update();
         if(recorder!=null&&!recorder.lastImported.equals(observedImport)){observedImport=recorder.lastImported;refreshSessions();}
         if(screenObject instanceof RecordScreen)((RecordScreen)screenObject).update();if(screenObject instanceof HomeScreen)((HomeScreen)screenObject).update(recorder);
         boolean recording=recorder!=null&&recorder.recording;if(wasRecording&&!recording)refreshSessions();wasRecording=recording;}
-    void dimDisplay() {
-        Dialog display=new Dialog(this,android.R.style.Theme_Material_NoActionBar);
-        FrameLayout black=new FrameLayout(this);
-        black.setBackgroundColor(android.graphics.Color.BLACK);
-        black.setContentDescription("Restore display");
-        black.setOnClickListener(v->display.dismiss());
-        display.setContentView(black);
-        displayDimmed=true;
-        display.setOnDismissListener(d->displayDimmed=false);
-        display.show();
-        Window window=display.getWindow();
-        window.setLayout(-1,-1);
-        window.setBackgroundDrawableResource(android.R.color.black);
-        WindowManager.LayoutParams attributes=window.getAttributes();
-        attributes.screenBrightness=0f;
-        window.setAttributes(attributes);
-        WindowInsetsController bars=window.getInsetsController();
-        if(bars!=null)bars.hide(WindowInsets.Type.systemBars());
-    }
     void message(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
     void export(SessionStore.Session session,boolean zip){exportFile=session.csv;exportZip=zip;Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(zip?"application/zip":"text/csv")
         .putExtra(Intent.EXTRA_TITLE,zip?session.csv.getName().replace(".csv",".zip"):session.csv.getName());startActivityForResult(intent,2);}

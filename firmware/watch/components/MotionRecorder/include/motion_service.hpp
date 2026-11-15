@@ -9,5 +9,6 @@ struct Saved {std::string id;uint32_t bytes=0,crc=0,samples=0;uint64_t started=0
 esp_err_t start();bool latest(float axes[6]);Status status();
 bool begin(uint8_t sport,uint8_t wrist);void stop();std::vector<Saved> inventory();bool clear_saved();
 std::string control(const std::string& command,std::vector<uint8_t>& chunk,size_t capacity);
+void restore_display();
 void ble_start();void ble_frames(const uint8_t* frames,size_t count);void ble_live(const uint8_t *packet,size_t size);bool transfer_active();
 }

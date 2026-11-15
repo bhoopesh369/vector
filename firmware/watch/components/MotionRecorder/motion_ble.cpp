@@ -70,7 +70,7 @@ static ble_gatt_chr_def chars[5];static ble_gatt_svc_def services[2];
 static void advertise();
 static int gap(ble_gap_event*event,void*){
     if(event->type==BLE_GAP_EVENT_CONNECT){if(event->connect.status==0){connection=event->connect.conn_handle;ble_gap_upd_params params{};params.itvl_min=6;params.itvl_max=12;params.supervision_timeout=400;ble_gap_update_params(event->connect.conn_handle,&params);ble_gap_set_data_len(event->connect.conn_handle,251,2120);ble_gap_set_prefered_le_phy(event->connect.conn_handle,BLE_GAP_LE_PHY_1M_MASK|BLE_GAP_LE_PHY_2M_MASK,BLE_GAP_LE_PHY_1M_MASK|BLE_GAP_LE_PHY_2M_MASK,0);}else advertise();}
-    else if(event->type==BLE_GAP_EVENT_DISCONNECT){reset_stream();connection=BLE_HS_CONN_HANDLE_NONE;subscribed=false;file_subscribed=false;mtu=23;std::vector<uint8_t> unused;control("CLOSE",unused,23);advertise();}
+    else if(event->type==BLE_GAP_EVENT_DISCONNECT){reset_stream();connection=BLE_HS_CONN_HANDLE_NONE;subscribed=false;file_subscribed=false;mtu=23;std::vector<uint8_t> unused;control("CLOSE",unused,23);restore_display();advertise();}
     else if(event->type==BLE_GAP_EVENT_SUBSCRIBE){if(event->subscribe.attr_handle==live_handle)subscribed=event->subscribe.cur_notify;if(event->subscribe.attr_handle==file_handle)file_subscribed=event->subscribe.cur_notify;if(event->subscribe.attr_handle==batch_handle){reset_stream();full_subscribed=event->subscribe.cur_notify&&stream_queue;}}
     else if(event->type==BLE_GAP_EVENT_MTU){mtu=event->mtu.value;ESP_LOGI("VectorMotion","Negotiated BLE MTU %u",unsigned(mtu.load()));}
     return 0;

@@ -1,6 +1,6 @@
 # Vector — sports sensor experiments
 
-Android v0.7 records the full BLE stream directly to phone storage on compatible watches. The app shows session times in IST and offers **Dim display** during recording. It summarizes long sessions from the full CSV and supports CSV/ZIP export. See [Android recording and setup](docs/ANDROID.md) and [sports app analysis](docs/SPORTS-APP.md).
+Vector Motion for Android records the full BLE stream directly to phone storage on compatible watches. The app shows session times in IST and offers **Dim watch display** on compatible firmware. It summarizes long sessions from the full CSV and supports CSV/ZIP export. See [Android recording and setup](docs/ANDROID.md) and [sports app analysis](docs/SPORTS-APP.md).
 
 The new factory-based watch firmware adds internal-flash recording and later Bluetooth download while keeping the normal launcher. See [standalone watch usage and current verification status](docs/WATCH.md). The USB and minimal BLE demos below are earlier firmware alternatives.
 

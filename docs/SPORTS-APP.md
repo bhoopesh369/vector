@@ -1,14 +1,14 @@
-# Vector Motion sports app — v0.7
+# Vector Motion sports app
 
 ## Record and review
 
 - **Home** shows the watch status, local recording count, captured time, and recent sessions.
-- **Record** lets you choose Badminton, Tennis, Running, or Other and left/right wrist. Connect the watch, then start recording. The active layout groups time, sample count, **Add drill marker** and **Stop & save** together. Mark Rest, Forehand, Backhand, Warm-up, or a custom drill. A marker uses the latest saved sample’s time base and also stores UTC wall time. **Dim display** blanks the app and requests minimum brightness. Tap to restore it, or use the phone power button for full panel sleep.
+- **Record** lets you choose Badminton, Tennis, Running, or Other and left/right wrist. Connect the watch, then start recording. The active layout groups time, sample count, **Add drill marker** and **Stop & save** together. Mark Rest, Forehand, Backhand, Warm-up, or a custom drill. A marker uses the latest saved sample’s time base and also stores UTC wall time. With compatible watch firmware, **Dim watch display** lowers the watch brightness to zero. Use **Restore watch brightness** to bring it back. Use the phone power button to control the phone screen.
 - **Sessions** filters by sport and date, saves notes, and offers analysis and exports. Active files stay hidden until finalized.
 - **Analysis** shows measured motion and recording quality. For sessions with up to 250,000 rows, pinch a chart to zoom, drag horizontally, use the range sliders, or reset to the whole session. Axis toggles affect the plots; statistics always use all six original axes within the selected time range. Choose a drill marker to select that drill up to the next marker.
 - Select two readable sessions in **Sessions**, then **Compare selected sessions**. Compare context (wrist/drill/fit) along with measurements; a higher peak does not necessarily mean better performance.
 
-The foreground service owns sensor capture independently of the visible screen. Navigation and activity recreation do not stop it. Bluetooth loss or five seconds without data ends and preserves the session; start a new session after reconnecting. The notification has a stop/disconnect action. The v0.7 app works with existing full-rate watch firmware.
+The foreground service owns sensor capture independently of the visible screen. Navigation and activity recreation do not stop it. Bluetooth loss or five seconds without data ends and preserves the session; start a new session after reconnecting. The notification has a stop/disconnect action. Phone recording works with existing full-rate watch firmware.
 
 ## Measurement definitions
 

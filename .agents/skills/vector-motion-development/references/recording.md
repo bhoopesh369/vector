@@ -35,7 +35,7 @@ Watch build overlays tracked `firmware/watch` onto factory sources staged in `.c
 - v0.7 imports use `startedUnix × 1,000,000 + (sampleUs − bootStartUs)` for watch archives with a valid session clock. The archive anchor has second resolution. Without a valid clock, imported samples stay boot-relative and the history date uses the import time. Existing CSVs are preserved.
 - Export session metadata with `timestampUnit`, `timeZone` and `clockSource` when available. Session dates use `Asia/Kolkata`. New drill markers keep the latest sample's timestamp in the same time base as the CSV and also record UTC wall time.
 - Whole-session summaries stream CSV rows with bounded memory. Above 250,000 rows, the app offers whole-session statistics and CSV/ZIP export. Smaller sessions retain interactive charts and range statistics.
-- **Dim display** blanks the app, requests minimum brightness and pauses its periodic UI updates. Tap the black screen to restore it. The phone power button switches the panel off or wakes it.
+- Android v0.8 uses the control characteristic to dim the watch display and restore its brightness. The capability is announced by the optional `display_dimmed` field in the `TIME` reply. Older watch firmware retains phone recording support. The phone power button controls the phone screen.
 
 ## Sensor range and timing
 

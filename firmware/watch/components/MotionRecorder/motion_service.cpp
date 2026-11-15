@@ -171,8 +171,45 @@ void stop(){
 std::vector<Saved> inventory(){std::lock_guard<std::mutex>disk(fs_lock);std::vector<Saved>out;if(recording||pending)return out;for(const auto&key:keys()){Saved item;if(read_info(key,item))out.push_back(item);}return out;}
 bool transfer_active(){return esp_timer_get_time()<transfer_deadline.load();}
 bool clear_saved(){std::lock_guard<std::mutex>disk(fs_lock);if(recording||pending||transfer_active())return false;if(download){fclose(download);download=nullptr;}bool okay=true;for(const auto&key:keys()){okay=unlink(path(key,".vmo").c_str())==0&&okay;unlink(path(key,".info").c_str());}refresh_space();message(okay?"Saved recordings deleted":"Some files could not be deleted");return okay;}
+// Called by the BLE host for display commands and disconnect cleanup.
+static int brightness_before_dim=-1;
+
+static bool set_display_dimmed(bool dimmed){
+    if(!dimmed && brightness_before_dim<0)return true;
+    if(!service_ready || !bsp_display_lock(100))return false;
+
+    esp_err_t result=ESP_OK;
+    if(dimmed && brightness_before_dim<0){
+        int brightness=bsp_display_brightness_get();
+        if(brightness<0)result=ESP_ERR_INVALID_STATE;
+        else{
+            result=bsp_display_brightness_set(0);
+            if(result==ESP_OK)brightness_before_dim=brightness;
+        }
+    }else if(!dimmed){
+        result=bsp_display_brightness_set(brightness_before_dim);
+        if(result==ESP_OK)brightness_before_dim=-1;
+    }
+    bsp_display_unlock();
+    return result==ESP_OK;
+}
+
+void restore_display(){
+    if(!set_display_dimmed(false))ESP_LOGW("VectorMotion","Could not restore display on disconnect");
+}
+
 std::string control(const std::string&command,std::vector<uint8_t>&chunk,size_t capacity){
-    if(command.rfind("TIME ",0)==0){uint64_t value=strtoull(command.c_str()+5,nullptr,10);if(value<1577836800||value>4102444800ULL)return "{\"kind\":\"error\",\"message\":\"Invalid time\"}";timeval tv{static_cast<time_t>(value),0};settimeofday(&tv,nullptr);return "{\"kind\":\"time\"}";}
+    if(command=="DISPLAY DIM"||command=="DISPLAY RESTORE"){
+        if(!set_display_dimmed(command=="DISPLAY DIM"))
+            return "{\"kind\":\"error\",\"message\":\"Could not change watch display\"}";
+        return brightness_before_dim>=0
+            ? "{\"kind\":\"display\",\"dimmed\":true}"
+            : "{\"kind\":\"display\",\"dimmed\":false}";
+    }
+    if(command.rfind("TIME ",0)==0){uint64_t value=strtoull(command.c_str()+5,nullptr,10);if(value<1577836800||value>4102444800ULL)return "{\"kind\":\"error\",\"message\":\"Invalid time\"}";timeval tv{static_cast<time_t>(value),0};settimeofday(&tv,nullptr);
+        return brightness_before_dim>=0
+            ? "{\"kind\":\"time\",\"display_dimmed\":true}"
+            : "{\"kind\":\"time\",\"display_dimmed\":false}";}
     if(command=="CLOSE"){std::lock_guard<std::mutex> disk(fs_lock);if(download){fclose(download);download=nullptr;}transfer_deadline=0;return "{\"kind\":\"closed\"}";}
     if(recording||pending)return "{\"kind\":\"error\",\"message\":\"Stop watch recording before transfer\"}";
     if(command.rfind("LIST ",0)==0){auto items=inventory();unsigned index=strtoul(command.c_str()+5,nullptr,10);if(index>=items.size())return "{\"kind\":\"end\"}";
