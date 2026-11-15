@@ -408,7 +408,7 @@ peak preservation, gap disconnection and unchanged-data checks.
 
 ## Badminton sports analysis
 
-Open Sync Studio, load a CSV/video session, and use **Sports analysis ↓** →
+Open Sync Studio, load a CSV/video session, and use **Sports tracking ↓** →
 **Sport: Badminton · experimental**. The mode proposes hit candidates, overlays
 those events on both plots and reports estimated/confirmed counts, review backlog,
 relative weak/medium/strong wrist-motion totals, rate, spacing and measured peaks.
@@ -428,9 +428,25 @@ prototype is a transparent heuristic; it does not inherit published model accura
 
 Reviewed badminton exports can now be loaded using **Load local review JSON**
 (`analysis/vector-badminton-analysis.json`) or **Import reviewed analysis**. Your
-confirmed/rejected labels are matched to the CSV and preserved. **Learn personal
-motion screen** uses those labels to flag similar non-hit motion. Flags are
-review-only by default; optional exclusions apply only to unreviewed proposals,
+confirmed/rejected labels are matched to the CSV and preserved. **Learn & save Badminton filter** uses those labels to flag similar non-hit motion. The saved Badminton filter is enabled automatically; exclusions apply only to unreviewed proposals,
 and confirmed contacts always take priority. **Use last personal screen** carries
 only the model to another recording, never the old recording's labels. Inspect
 its source diagnostic and validate weak hits before enabling exclusions.
+
+
+### Sports tracking → Badminton: saved hit filter
+
+The reviewed filter is saved in `web/sports-tracking/badminton/hit-filter.js` and
+loads automatically for Badminton. No retraining or review-file upload is needed
+just to use the filter. The default **Filtered hits** view and counter exclude
+flagged unreviewed proposals; confirmed contacts always remain included. Use
+**Filtered out / screen flags** or **All candidates** to inspect exclusions.
+**Export filtered hits CSV** exports included events only; **Export all proposals
+CSV** retains the complete audit trail.
+
+Load your local review JSON once to restore its 50 confirmations and 18 rejections
+in a new browser. The saved model contains aggregate parameters and diagnostics,
+not the per-event labels or raw recording. Both filter toggles can be disabled;
+your updated choice persists for the recording. The first use of this preset
+turns filtering on, replacing the older review-only default. New learned filters
+are saved in browser storage and used ahead of the bundled filter.

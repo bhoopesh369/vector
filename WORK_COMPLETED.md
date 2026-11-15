@@ -271,3 +271,24 @@ retested during this web-viewer work.
   labels were inferred for missing events. Exports preserve flags, inclusion
   decisions and confirmed overrides. The user's separate AGENTS.md edits and
   analysis/ review file are intentionally left unstaged.
+
+## Saved Sports tracking / Badminton filter
+
+- Saved the aggregate, reproducible learned filter as the runtime asset
+  web/sports-tracking/badminton/hit-filter.js. It contains model parameters and
+  source diagnostics, not per-event review labels or recording samples.
+- Badminton now automatically loads a saved/per-recording filter (with the bundled
+  filter as fallback) and excludes flagged unreviewed proposals. This migrates
+  the old review-only default once. Confirmations always override filtering, and
+  explicit new opt-out settings persist across reloads.
+- Filtered hits are the default list/plot view and counter. Added a filtered-hit
+  CSV export while retaining the all-proposal export and flagged-event review.
+  Relearning saves and activates the Badminton filter. Raw signals and timestamps
+  are not filtered or overwritten by this candidate screen.
+- Added controller/preset checks for default loading, legacy migration, persistent
+  opt-out, unchanged bundled parameters, confirmation overrides and separate
+  filtered/full CSV exports. Browser access remains unverified after the previous
+  localhost permission decline; no browser workaround was attempted.
+- Validation: 28 Python tests and eleven JavaScript suites pass, including the
+  saved-preset/controller checks. The source review JSON and AGENTS.md edit remain
+  unstaged; no recordings or generated audit outputs are part of this change.

@@ -1,7 +1,7 @@
 # Experimental badminton review mode
 
 This mode proposes wrist-motion events for video review. It does not establish
-shuttle contact from an acceleration kink alone. Choose Sports analysis →
+shuttle contact from an acceleration kink alone. Choose Sports tracking →
 Badminton after loading a CSV/video session. Estimated hits include pending and
 uncertain candidates; Confirmed contacts counts only the user's confirmations.
 Reject empty swings and unrelated movements. Add visually verified missed hits at
@@ -127,16 +127,16 @@ least three examples. The tree is intentionally small; it is a personal review
 screen, not a bending/circling activity classifier or a contact probability model.
 It uses only human-confirmed / human-rejected labels, never its own predictions.
 
-The screen starts in **review-only** mode. Flags do not change the estimated count.
-The optional **Exclude flagged unreviewed events from estimate** control reduces
-the count while keeping those proposals in the review queue. Human confirmations
+The saved **Sports tracking → Badminton** preset enables filtering automatically.
+**Exclude flagged unreviewed events from estimate** reduces the count while
+keeping those proposals in the review queue. Turn it off for review-only flags. Human confirmations
 always override a flag. Rejections remain human labels, separate from algorithmic
-screening; clipped strength stays unrated. The Learned screen flags filter shows
+screening; clipped strength stays unrated. The Filtered out / screen flags view shows
 all disagreements, including already-confirmed contacts that the screen flags.
 
 The model and its source diagnostic persist with the recording. **Use last personal
-screen** copies the latest learned model to a different recording, with exclusion
-off and without copying any review labels. Validate it with the same watch mounting
+screen** copies the latest learned model to a different recording, with filtering
+on and without copying any review labels. Validate it with the same watch mounting
 and player before relying on it. CSV/JSON exports carry flags, inclusion decisions
 and model provenance; the diagnostic always refers to the model's source recording.
 
@@ -168,3 +168,22 @@ node tests/test-sports-review.cjs
 The user's review JSON and generated audit/profile outputs remain local. Browser
 verification of these new controls was unavailable because localhost browser access
 was declined; import, screen, override and export contracts were tested locally.
+
+
+## Saved Badminton hit-filter preset
+
+The aggregate learned parameters are versioned as
+`web/sports-tracking/badminton/hit-filter.js`, loaded before the sports controller.
+On first use, the preset chooses the per-recording model, then the last personal
+model, then this bundled model. Filtering is enabled for hit tracking. Explicit
+new preset settings (including disabled filtering) survive subsequent reloads.
+The migration does not change human labels or camera alignment.
+
+Filtered hits are the default list/plot view. The count and CSV export remove
+flagged unreviewed proposals and human rejections; confirmed contacts override
+any screen flag. The full proposal export and flagged-event view remain available.
+The model parameters contain no per-event review labels. A fresh browser needs
+the source review JSON to recover confirmations; the bundled model alone cannot
+reconstruct those labels. Source diagnostics remain 45/50 fitted contacts kept,
+18/18 non-hits flagged, and the previously documented chronological check. This
+preset is still experimental and may filter real weak shots before human review.
