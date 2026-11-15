@@ -90,3 +90,8 @@ Optional notify characteristic `7b8e0005-6f27-4b8e-a9a1-3cd405ee1920` carries8-b
 Firmware has a bounded4096-sample PSRAM transport queue and a dedicated sender, with notification backpressure retries. Requested ATT MTU517 yields18-sample values that fit two251-byte link-layer data packets; negotiated smaller MTUs use smaller batches. DLE251, fast connection intervals and2M PHY are requested with normal peer fallback. Actual throughput must be measured. Saved-file downloads pause/reset streaming queues and epochs; phone recording and archive download remain mutually exclusive.
 
 OnePlus validation:36659 saved samples/31.213151s=1174.44Hz, zero sequence gaps,20.764ms maximum timestamp gap.35248 samples arrived in a30-second interval with phone screen off at both boundaries. Full-rate metadata and reduced chart data were checked. Watch/phone both used USB power; long-duration battery reliability remains unverified. Host framing/legacy/resampling checks and both builds pass. Additional visible UI validation was skipped while phone was locked.
+
+
+## Connected-watch dim check — 15 November 2026
+
+The connected OnePlus initially had v0.6 and the watch did not advertise dim support. After updating the app and watch without removing saved sessions, a live BLE check acknowledged Dim and Restore, added14069 samples during12s of dimming, and saved20346 samples over17.322162s (1174.507Hz), with zero sequence gaps and20.491ms maximum timestamp interval. Disconnect/reconnect confirmed restored display state; the user separately confirmed the screen visibly darkened and returned to its previous brightness. The temporary test package was removed. This was a short USB-connected check, not a battery endurance result.

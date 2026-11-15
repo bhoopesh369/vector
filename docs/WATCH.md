@@ -55,7 +55,7 @@ Follow-up: battery-powered transfers intermittently stalled (first chunk and lat
 
 ## High-rate capture and mobile streaming
 
-The watch now configures matched accelerometer and gyroscope ODR code2, nominal1793.6Hz, ±16g/±1024dps, LPF mode3. The sensor task drains a128-frame FIFO at a64-frame watermark using bounded CTRL9 handshakes and400kHz I2C, and queues complete batches in PSRAM for buffered storage. The gyro still uses ±1024 dps per axis. QMI8658C Rev A lists the setting for ±2048 dps from earlier revisions as unavailable. Support on the installed chip remains unverified. The configured sensor rate is not a guarantee of the saved rate. Watch recording displays the measured saved sample rate.
+The watch now configures matched accelerometer and gyroscope ODR code2, nominal1793.6Hz, ±16g/±1024dps, LPF mode3. The sensor task drains a128-frame FIFO at a64-frame watermark using bounded CTRL9 handshakes and400kHz I2C, and queues complete batches in PSRAM for buffered storage. The gyro still uses ±1024 dps per axis. QMI8658C Rev A lists the setting for ±2048 dps from earlier revisions as unavailable. The attached chip reports revision0x7C, matching Rev A. A temporary forced-range experiment is documented below; production remains at±1024dps. The configured sensor rate is not a guarantee of the saved rate. Watch recording displays the measured saved sample rate.
 
 Important QMI8658C constraint: FIFO read mode discards newly arriving sensor samples (manufacturer RevA section8.7). FIFO helps absorb scheduler delays but cannot make this shared-I2C board lossless. Within each batch, timestamps are reconstructed at the nominal sensor period; each batch is anchored to host time at FIFO-read entry. Real inter-batch pauses are retained. These are approximate batch-reconstructed timestamps, not individual hardware timestamps. Sequence gaps expose software queue loss; FIFO overflow/read errors are reported separately. Zero sequence gaps does not imply continuous hardware acquisition.
 
@@ -77,3 +77,14 @@ Post-optimization validation: recording7bcfb5a2eb89dc83 has4744 samples/4.772246
 
 
 Since Android v0.6, the phone can record the full acquired stream directly through UUID0005 using batched raw samples. Start recording on the phone and leave the watch recorder idle to save only on the phone. There is no intentional live-data decimation in that stream. The old reduced preview remains available for older clients. See ANDROID.md for packet framing, loss handling and measured phone CSV rates. Watch-local recording and later download continue to work.
+
+
+## Gyroscope range experiment — 15 November 2026
+
+Direct register diagnostics read WHO_AM_I=0x05, REVISION_ID=0x7C and sensor firmware0x01031E. The revision matches QMI8658C Rev A, whose CTRL3 table documents code110 as±1024dps and code111 as unavailable. Older documentation listed code111 as±2048dps. The manufacturer's documented range and observed undocumented behavior must be distinguished.
+
+At the user's explicit request, an isolated USB diagnostic compared normal code110, forced code111, then restored code110. Each phase produced1000 samples with zero I2C errors. CTRL3 read back0x66,0x76,0x66 at nominal112.1Hz. The stationary X/Y raw biases changed from approximately(-103.2,+108.6) to(-52.0,+54.1), then back to(-103.7,+109.2). This is consistent with a sensitivity change from32 to16 counts/dps rather than merely retaining the register bits. It does not establish calibrated angular-speed accuracy or full-scale linearity.
+
+A subsequent user wiggle capture at forced code111 saved5010 raw and converted samples over44.993828s (111.326Hz), with matching firmware/host counts, consecutive sequences, zero reported I2C errors and zero near-int16-saturation samples. Using the explicitly experimental16counts/dps conversion, peak absolute X/Y/Z rates were947.3125/1613.25/1278.6875dps, and72 samples exceeded1024dps on at least one axis. The largest timestamp interval was12.284ms. These are experimental scaled measurements, not independent proof of true motion above1024dps. Raw values were retained locally so future analysis need not assume that conversion.
+
+The experiment ran at112.1Hz nominal through USB, separately from the normal high-rate FIFO/BLE recording path. It did not save experimental values as watch workout archives or change phone recording formats. Raw captures, logs and firmware backups remain ignored local artifacts. The SHA-256-verified working firmware was restored with flash verification, normal startup was confirmed, and production gyro configuration remains±1024dps. No permanent2048dps mode is enabled. A reference rotation setup is still needed to validate absolute accuracy near2000dps.
