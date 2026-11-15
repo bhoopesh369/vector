@@ -425,3 +425,12 @@ shuttle force/speed or stroke-quality measurements.
 The method was researched before implementation. See
 [the design, sources and validation limits](docs/BADMINTON-ANALYSIS.md). The
 prototype is a transparent heuristic; it does not inherit published model accuracy.
+
+Reviewed badminton exports can now be loaded using **Load local review JSON**
+(`analysis/vector-badminton-analysis.json`) or **Import reviewed analysis**. Your
+confirmed/rejected labels are matched to the CSV and preserved. **Learn personal
+motion screen** uses those labels to flag similar non-hit motion. Flags are
+review-only by default; optional exclusions apply only to unreviewed proposals,
+and confirmed contacts always take priority. **Use last personal screen** carries
+only the model to another recording, never the old recording's labels. Inspect
+its source diagnostic and validate weak hits before enabling exclusions.

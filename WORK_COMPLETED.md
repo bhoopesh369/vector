@@ -245,3 +245,29 @@ retested during this web-viewer work.
   duplicate-add prevention and synchronized event replay. Test review changes
   were returned to pending; no contacts were asserted as ground truth. Browser
   console showed no errors. The screenshot remains local under .cache.
+
+## Review-guided false-hit screening
+
+- Read the user-supplied analysis/vector-badminton-analysis.json without modifying
+  or staging it. It contains 50 confirmed contacts / 18 rejected proposals. The
+  first three are reported arm circles; other negatives are reported mostly
+  shuttle pickups, without exact per-event activity subclasses.
+- Added matching-recording review import, local-file loading and a small personal
+  motion-screen tree trained only on human labels. Source CSV features are
+  recomputed. Existing alignment, sensor data and review decisions are preserved.
+- Flags default to review-only; optional exclusions never remove confirmed hits.
+  Flagged unreviewed events remain in the review queue. A last learned model can
+  be explicitly reused on another recording without transferring review labels.
+- Same-label fit flags 18/18 non-hits and 5/50 contacts. A 45-event / 23-event
+  chronological diagnostic keeps 15/16 known contacts and flags 5/7 non-hits.
+  These are not independent validation or session hit-recall measurements.
+- Added a reproducible local CSV/review audit and tests for identity-safe imports,
+  chronology, bounded trees, review-only behavior, overrides and exported flags.
+  Browser testing of the new controls was blocked by declined localhost access;
+  no alternate browser route was attempted. User review data and audit artifacts
+  remain local and uncommitted.
+- Verification: 28 Python tests and ten JavaScript suites pass. The audit
+  recomputes all 68 matching proposal features from the CSV before fitting; no
+  labels were inferred for missing events. Exports preserve flags, inclusion
+  decisions and confirmed overrides. The user's separate AGENTS.md edits and
+  analysis/ review file are intentionally left unstaged.

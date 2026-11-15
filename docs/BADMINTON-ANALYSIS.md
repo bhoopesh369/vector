@@ -111,3 +111,60 @@ node tests/test-sports-worker.cjs
 Export/storage contracts are additionally checked with
 `node tests/test-sports-export.cjs`: quoted recording names, original UTC
 microseconds, provisional status, algorithm/clock provenance and review restoration.
+
+## Import reviews and learn a personal motion screen
+
+Use **Load local review JSON** for `analysis/vector-badminton-analysis.json`, or
+**Import reviewed analysis** for another exported file. Import validates recording
+identity, timestamps, IDs and detector version before applying labels. It restores
+review decisions and manual additions, recomputes features from the matching CSV,
+and preserves current camera alignment. The source review file is never rewritten.
+
+**Learn personal motion screen** needs at least 24 reviewed proposals, including
+8 contacts and 6 non-hits. A two-level decision tree uses wrist gyro RMS and
+acceleration-change / acceleration RMS, in log space. Each fitted leaf needs at
+least three examples. The tree is intentionally small; it is a personal review
+screen, not a bending/circling activity classifier or a contact probability model.
+It uses only human-confirmed / human-rejected labels, never its own predictions.
+
+The screen starts in **review-only** mode. Flags do not change the estimated count.
+The optional **Exclude flagged unreviewed events from estimate** control reduces
+the count while keeping those proposals in the review queue. Human confirmations
+always override a flag. Rejections remain human labels, separate from algorithmic
+screening; clipped strength stays unrated. The Learned screen flags filter shows
+all disagreements, including already-confirmed contacts that the screen flags.
+
+The model and its source diagnostic persist with the recording. **Use last personal
+screen** copies the latest learned model to a different recording, with exclusion
+off and without copying any review labels. Validate it with the same watch mounting
+and player before relying on it. CSV/JSON exports carry flags, inclusion decisions
+and model provenance; the diagnostic always refers to the model's source recording.
+
+### Evidence from the supplied reviewed session
+
+The user's JSON labels all 68 original proposals: 50 contacts and 18 non-hits.
+The user identifies the first three as arm circles and estimates that most later
+false hits are shuttle pickups. Exact pickup/circling subclass labels were not
+provided for the other events; the code does not invent them.
+
+Recomputed-feature fitting flags all 18 reviewed non-hits, but also flags 5 of the
+50 confirmed contacts. Those five remain included because human confirmations win.
+A chronological diagnostic fits on the first 45 reviewed events and checks the
+last 23: it keeps 15/16 known contacts and flags 5/7 non-hits. Two non-hits remain
+unflagged and one known contact is flagged in that diagnostic.
+
+These are within-session diagnostics, not independent validation. Feature/design
+choices were informed by this session, and the final tree uses all reviewed labels.
+Performance on new players, weak shots or new sessions is unknown. No session hit
+recall can be inferred because the review file contains only detected proposals.
+
+Reproduce the audit locally, without changing the recording or review file:
+
+```sh
+node scripts/audit_badminton_reviews.cjs analysis/vector-badminton-analysis.json samples/vector-motion-sessions/recordings/badminton-fullrate-2026-11-15T07-42-29.347660Z.csv
+node tests/test-sports-review.cjs
+```
+
+The user's review JSON and generated audit/profile outputs remain local. Browser
+verification of these new controls was unavailable because localhost browser access
+was declined; import, screen, override and export contracts were tested locally.
