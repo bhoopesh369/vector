@@ -13,6 +13,7 @@ import java.util.concurrent.*;
 
 /** Navigation and activity lifecycle only; recording lives in RecorderService. */
 public class MainActivity extends Activity {
+    private static final int EXPORT_SESSION=2, EXPORT_ALL_SESSIONS=3;
     public RecorderService recorder;
     final Handler handler=new Handler(Looper.getMainLooper());
     final ExecutorService io=Executors.newSingleThreadExecutor();
@@ -85,14 +86,41 @@ public class MainActivity extends Activity {
         boolean recording=recorder!=null&&recorder.recording;if(wasRecording&&!recording)refreshSessions();wasRecording=recording;}
     void message(String text){Toast.makeText(this,text,Toast.LENGTH_LONG).show();}
     void export(SessionStore.Session session,boolean zip){exportFile=session.csv;exportZip=zip;Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(zip?"application/zip":"text/csv")
-        .putExtra(Intent.EXTRA_TITLE,zip?session.csv.getName().replace(".csv",".zip"):session.csv.getName());startActivityForResult(intent,2);}
-    @Override protected void onActivityResult(int request,int result,Intent intent){super.onActivityResult(request,result,intent);if(request!=2||result!=RESULT_OK||intent==null||intent.getData()==null||exportFile==null)return;
+        .putExtra(Intent.EXTRA_TITLE,zip?session.csv.getName().replace(".csv",".zip"):session.csv.getName());startActivityForResult(intent,EXPORT_SESSION);}
+    void exportAllSessions(){
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+            .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"vector-motion-sessions.zip");
+        startActivityForResult(intent,EXPORT_ALL_SESSIONS);
+    }
+    @Override protected void onActivityResult(int request,int result,Intent intent){
+        super.onActivityResult(request,result,intent);
+        if(result!=RESULT_OK||intent==null||intent.getData()==null)return;
+        if(request==EXPORT_ALL_SESSIONS){
+            exportLibrary(intent.getData());
+            return;
+        }
+        if(request!=EXPORT_SESSION||exportFile==null)return;
         File source=exportFile;boolean zip=exportZip;android.net.Uri destination=intent.getData();
         io.execute(()->{try(OutputStream out=getContentResolver().openOutputStream(destination)){
             if(out==null)throw new IOException("Could not open destination");if(new File(source.getPath()+".active").exists())throw new IOException("Stop recording before exporting");
             if(zip){SessionStore.Session session=new SessionStore.Session(source);session.metadata=store.metadata(source);store.exportZip(session,out);}else try(InputStream in=new FileInputStream(source)){SessionStore.copy(in,out);}
             handler.post(()->message(zip?"Session ZIP exported":"CSV exported"));
         }catch(Exception e){handler.post(()->message("Export failed: "+e.getMessage()));}});
+    }
+    private void exportLibrary(android.net.Uri destination){
+        message("Exporting saved sessions…");
+        io.execute(()->{
+            try {
+                int count;
+                try(OutputStream out=getContentResolver().openOutputStream(destination)){
+                    if(out==null)throw new IOException("Could not open destination");
+                    count=store.exportAll(out);
+                }
+                handler.post(()->message(count==1?"Exported 1 session":"Exported "+count+" sessions"));
+            }catch(IOException e){
+                handler.post(()->message("Session export failed: "+e.getMessage()));
+            }
+        });
     }
     @Override public void onBackPressed(){if(screenObject instanceof AnalysisScreen||!"Home".equals(tab))navigate("Home");else super.onBackPressed();}
 }

@@ -39,6 +39,8 @@ On process restart, `.active` files are finalized as interrupted. If a last CSV 
 
 **Export CSV** uses Android's document picker. **Export complete session ZIP** includes the unmodified named CSV, `session.json`, and `analytics.json`. Original files stay in app-private storage; uninstalling the app removes them, so export valuable sessions. Files and derived data stay on the phone unless you explicitly export them; no Internet permission is requested.
 
+**Sessions → Export all sessions** saves a single ZIP of the phone library, regardless of the current filters. It includes `sessions.csv` with one row per saved session, the original sensor CSVs in `recordings/`, and per-session JSON in `metadata/` with the original notes and drill markers. The index links each row to its recording and includes UTC start and end times when known, duration in seconds, sample count and rate, sport, wrist, notes, and recording outcome. In-progress recordings are excluded. Saved files with unreadable data are included with an analysis error in the index.
+
 ## Build and checks
 
 Use the existing Android SDK35/build-tools35.0.0 and JDK17, without installing or changing laptop-wide tools. Downloads, signing keys and generated outputs stay under this repository. The original local signing key is reused for updates that preserve app data.

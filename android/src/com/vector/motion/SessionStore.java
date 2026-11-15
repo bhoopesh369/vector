@@ -85,6 +85,10 @@ public final class SessionStore {
             if(pending==null)return;
             for(File marker:pending) {
                 File csv=new File(marker.getPath().substring(0,marker.getPath().length()-7));
+                if(!csv.exists()){
+                    Files.deleteIfExists(marker.toPath());
+                    continue;
+                }
                 String outcome="Interrupted: app process ended; buffered samples may be missing";
                 MotionAnalytics.Stats stats=null;
                 try{stats=summary(csv);}catch(Exception e){outcome+=". Raw CSV needs inspection: "+e.getMessage();}
@@ -166,6 +170,61 @@ public final class SessionStore {
             zip.putNextEntry(new ZipEntry("analytics.json"));try{zip.write(statsJson(full).toString().getBytes(StandardCharsets.UTF_8));}
             catch(JSONException e){throw new IOException(e);}zip.closeEntry();
         }
+    }
+
+    public int exportAll(OutputStream output) throws IOException {
+        List<Session> sessions=list();
+        if(sessions.isEmpty())throw new IOException("No saved sessions to export");
+        try(ZipOutputStream zip=new ZipOutputStream(output)){
+            zip.putNextEntry(new ZipEntry("sessions.csv"));
+            BufferedWriter index=new BufferedWriter(new OutputStreamWriter(zip,StandardCharsets.UTF_8));
+            index.write("recording,started_utc,ended_utc,file_modified_utc,duration_seconds,samples,received_hz,"
+                +"sport,wrist,notes,source,outcome,markers,missing_sequences,clipped_samples,"
+                +"timestamp_unit,time_zone,clock_source,analysis_error\r\n");
+            for(Session session:sessions){
+                JSONObject metadata=session.metadata;
+                MotionAnalytics.Stats stats=session.stats;
+                JSONArray markers=metadata.optJSONArray("markers");
+                writeCsvRow(index,recordingEntry(session),metadata.optString("startedUtc"),metadata.optString("endedUtc"),
+                    Instant.ofEpochMilli(session.csv.lastModified()).toString(),
+                    stats==null?metadata.optString("durationSeconds"):Double.toString(stats.durationSeconds),
+                    stats==null?metadata.optString("receivedSamples"):Long.toString(stats.count),
+                    stats==null?"":Double.toString(stats.receivedHz),
+                    session.sport(),session.wrist(),session.notes(),metadata.optString("source"),session.outcome(),
+                    markers==null?"":Integer.toString(markers.length()),
+                    stats==null?metadata.optString("missingSequences"):Long.toString(stats.missing),
+                    stats==null?metadata.optString("clippedSamples"):Long.toString(stats.clipped),
+                    metadata.optString("timestampUnit"),metadata.optString("timeZone"),
+                    metadata.optString("clockSource"),session.error);
+            }
+            index.flush();
+            zip.closeEntry();
+            for(Session session:sessions){
+                zip.putNextEntry(new ZipEntry(recordingEntry(session)));
+                try(InputStream in=new FileInputStream(session.csv)){copy(in,zip);}
+                zip.closeEntry();
+                zip.putNextEntry(new ZipEntry("metadata/"+session.csv.getName()+".json"));
+                zip.write(session.metadata.toString().getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+        }
+        return sessions.size();
+    }
+
+    private static String recordingEntry(Session session){return "recordings/"+session.csv.getName();}
+
+    private static void writeCsvRow(Writer writer,String... fields) throws IOException {
+        for(int i=0;i<fields.length;i++){
+            if(i>0)writer.write(',');
+            String field=fields[i];
+            String trimmed=field.trim();
+            writer.write('"');
+            // Keep user text from being evaluated as a spreadsheet formula.
+            if(!trimmed.isEmpty()&&"=+-@".indexOf(trimmed.charAt(0))>=0)writer.write('\'');
+            writer.write(field.replace("\"","\"\""));
+            writer.write('"');
+        }
+        writer.write("\r\n");
     }
     public static void copy(InputStream in,OutputStream out)throws IOException{byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
     public static JSONObject statsJson(MotionAnalytics.Stats s)throws JSONException{

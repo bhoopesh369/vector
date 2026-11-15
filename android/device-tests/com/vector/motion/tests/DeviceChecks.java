@@ -31,6 +31,7 @@ public class DeviceChecks extends Instrumentation {
         Files.write(csv.toPath(),(raw+"4,3000000,0,0,1,0,0,0,0\n").getBytes("UTF-8"));check(store.list().get(0).stats.count==3,"Cache invalidated by changed CSV");
         File empty=new File(dir,"empty.csv");Files.write(empty.toPath(),(MotionPacket.HEADER+"\n").getBytes("UTF-8"));check(store.summary(empty).count==0,"Empty recording supported");
         File bad=new File(dir,"bad.csv");Files.write(bad.toPath(),"not,a,valid,sample\n".getBytes("UTF-8"));boolean rejected=false;try{store.summary(bad);}catch(IOException ok){rejected=true;}check(rejected,"Malformed CSV rejected");
+        checkLibraryExport(store,saved,bad);
         if(!"lifecycle".equals(args.getString("case"))) {
         File partial=new File(dir,"partial.csv");byte[] partialBytes=(raw+"4,3000000,0,").getBytes("UTF-8");Files.write(partial.toPath(),partialBytes);new File(partial.getPath()+".active").createNewFile();
         store.recoverInterrupted();
@@ -54,6 +55,31 @@ public class DeviceChecks extends Instrumentation {
         check(activity.isDestroyed(),"Activity destroyed before stale callback check");
         java.lang.reflect.Method refresh=MainActivity.class.getDeclaredMethod("refreshSessions");refresh.setAccessible(true);
         runOnMainSync(()->{try{refresh.invoke(activity);}catch(Exception e){throw new RuntimeException("Stale notes callback must not crash",e);}});
-        result.putString("stream","PASS: legacy data, metadata, markers, notes, interruption, cache invalidation, empty/malformed data, ZIP round trip, native navigation\n");finish(Activity.RESULT_OK,result);
+        result.putString("stream","PASS: storage, individual and full library ZIPs, native navigation\n");finish(Activity.RESULT_OK,result);
     }catch(Throwable failure){result.putString("stream","FAIL: "+android.util.Log.getStackTraceString(failure));finish(Activity.RESULT_CANCELED,result);}finally{if(dir.exists())try{Files.walk(dir.toPath()).sorted(Comparator.reverseOrder()).forEach(path->{try{Files.deleteIfExists(path);}catch(IOException ignored){}});}catch(IOException ignored){}}}
+
+    private static void checkLibraryExport(SessionStore store,SessionStore.Session saved,File malformed) throws Exception {
+        String notes="Windy, with \"gusts\"\nSecond drill";
+        store.notes(saved,notes);
+        File active=new File(store.directory,"active.csv");
+        Files.createFile(new File(active.getPath()+".active").toPath());
+        Files.write(active.toPath(),Files.readAllBytes(saved.csv.toPath()));
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+        check(store.exportAll(bytes)==3,"Library export includes three finished recordings");
+        Map<String,byte[]> entries=new HashMap<>();
+        try(ZipInputStream input=new ZipInputStream(new ByteArrayInputStream(bytes.toByteArray()))){
+            ZipEntry entry;
+            while((entry=input.getNextEntry())!=null)entries.put(entry.getName(),input.readAllBytes());
+        }
+        check(entries.size()==7&&!entries.containsKey("recordings/active.csv"),"Only finished recordings and metadata exported");
+        check(Arrays.equals(entries.get("recordings/legacy.csv"),Files.readAllBytes(saved.csv.toPath())),"Library preserves recording bytes");
+        check(Arrays.equals(entries.get("recordings/bad.csv"),Files.readAllBytes(malformed.toPath())),"Library retains unreadable recording");
+        String index=new String(entries.get("sessions.csv"),java.nio.charset.StandardCharsets.UTF_8);
+        check(index.contains("\"2.0\",\"3\",\"1.0\",\"Tennis\",\"Left\""),"Index includes measured duration, count and rate");
+        check(index.contains("\"Windy, with \"\"gusts\"\"\nSecond drill\""),"Index escapes commas, quotes and newlines");
+        JSONObject metadata=new JSONObject(new String(entries.get("metadata/legacy.csv.json"),java.nio.charset.StandardCharsets.UTF_8));
+        check(notes.equals(metadata.getString("notes"))&&metadata.getJSONArray("markers").length()==1,"Library retains notes and drill markers");
+        Files.delete(active.toPath());
+        Files.delete(new File(active.getPath()+".active").toPath());
+    }
 }

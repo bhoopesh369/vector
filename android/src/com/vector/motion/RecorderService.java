@@ -7,6 +7,7 @@ import android.content.*;
 import android.content.pm.ServiceInfo;
 import android.os.*;
 import java.io.*;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.*;
 
@@ -219,10 +220,17 @@ public class RecorderService extends Service {
         if(!ready || recording || syncBusy) return;
         recordingName=currentSport.toLowerCase(Locale.US)+(fullRate?"-fullrate":latest!=null&&latest.preview?"-preview":"")+"-"+Instant.now().toString().replace(':','-')+".csv";
         File f=new File(new File(getFilesDir(),"recordings"),recordingName);
-        if(!f.createNewFile()) throw new IOException("Recording filename already exists");
+        // Publish the active marker before the CSV so a library export can't pick up a new recording.
+        File activeMarker=new File(f.getPath()+".active");
+        Files.createFile(activeMarker.toPath());
+        try {
+            Files.createFile(f.toPath());
+        } catch(IOException e) {
+            try { Files.deleteIfExists(activeMarker.toPath()); } catch(IOException cleanup) { e.addSuppressed(cleanup); }
+            throw e;
+        }
         writer=new BufferedWriter(new FileWriter(f));
         writer.write(MotionPacket.HEADER+"\n"); writer.flush();
-        new File(f.getPath()+".active").createNewFile();
         sessions.create(f,currentSport,currentWrist);
         if(fullRate)sessions.markFullRate(f);else if(latest!=null&&latest.preview)sessions.markPreview(f);
         count=missing=clipped=0; recordedSeconds=0; lastFlush=SystemClock.elapsedRealtime();

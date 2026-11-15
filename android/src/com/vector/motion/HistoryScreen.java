@@ -9,6 +9,9 @@ final class HistoryScreen {
     final LinearLayout root;private final MainActivity host;private final LinearLayout list;private final Spinner sport,date;
     HistoryScreen(MainActivity host){this.host=host;root=SportUi.column(host);SportUi.caption(root,"YOUR LOCAL LIBRARY");SportUi.heading(root,"Sessions",32);SportUi.caption(root,"Review motion, annotate drills, or compare two recordings.");
         SportUi.button(root,"Download watch recordings",false,host::watchLibrary).setTag("watch-library");
+        Button exportAll=SportUi.button(root,"Export all sessions",false,host::exportAllSessions);
+        exportAll.setTag("export-all-sessions");
+        exportAll.setEnabled(!host.sessions.isEmpty());
         sport=SportUi.choices(root,new String[]{"All sports","Badminton","Tennis","Running","Other","Not specified"});sport.setSelection(host.filterSport);
         date=SportUi.choices(root,new String[]{"All dates","Last 7 days","Last 30 days"});date.setSelection(host.filterDate);
         SportUi.button(root,"Compare selected sessions",true,()->{
