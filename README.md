@@ -373,3 +373,35 @@ Drag tracks or use **Preview / Align here** to refine one clearly visible event.
 Metadata placement is not proof of physical sensor accuracy or frame-level sync.
 See `recordings/new-session-review/report.md` for the 14-session analysis and
 `node tests/test-import-clock.cjs` for clock/precision/frame-table verification.
+
+## Interactive charts and replay zones
+
+In Sync Studio, drag either sensor chart to select an interval; click to seek.
+Both charts share their zoom, hover crosshair and highlighted zone. The overview
+shows the full recording: dragging it selects a zone and opens that interval.
+Use **＋ Zoom**, **− Zoom**, **Zoom to zone**, or **Fit recording**. Ctrl/Command +
+wheel zooms around the pointer; Shift + drag pans. Focus a chart and use +/− to
+zoom or Shift + arrow to pan. Double-click fits the full recording.
+
+Enter exact **Zone from / to** times and click **Set zone** if preferred. Click
+**Replay zone** to play sensor data and aligned video within those boundaries.
+**Loop** repeats it; turn Loop off to stop at the end. Pause uses the main Play
+button or Space. Seeking outside the zone returns to normal timeline playback.
+**Save zone** stores a named interval for that recording in browser local storage;
+select its chip to recall/zoom, ▶ to replay, or × to remove it. These intervals
+are separate from event markers. Alignment JSON exports include saved replay
+zones for the loaded recordings. Keep an export as a backup of browser storage.
+
+The detailed IMU analyser also supports drag selection on any plot and **Replay
+window / Loop window**. Its window CSV export uses the selected range. Ordinary
+Play continues on the recording timeline; Replay limits playback to the chosen
+interval.
+
+Traces retain first/last samples and timestamp-ordered extrema per pixel, keeping
+real peaks and visible gaps. Chart backgrounds are cached between view changes,
+so playback redraws cursor/selection overlays instead of scanning the whole CSV
+for every frame. Smooth drawing does not modify raw readings or apply a signal
+filter. Low-pass filtering remains an explicit analyser action.
+
+Run `node tests/test-graph-core.cjs` for zoom, bounded panning, replay boundaries,
+peak preservation, gap disconnection and unchanged-data checks.

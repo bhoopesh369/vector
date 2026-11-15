@@ -200,3 +200,24 @@ retested during this web-viewer work.
   performed. All nine video originals remain local; no LFS filters or installer
   are needed. The unpublished media commits were replaced before pushing, so
   video pointers and LFS objects are not part of outgoing main history.
+
+## Interactive graphs and replay zones
+
+- Sync Studio now has linked chart zoom/pan, a full-recording overview, hover
+  readouts/crosshairs and drag-to-select replay zones. Exact numeric boundaries,
+  zone zoom, fit, keyboard controls and playhead following are available.
+- Replay synchronizes video and IMU inside the selected interval, loops on request
+  and stops at its endpoint otherwise. Named zones persist per recording and are
+  included in alignment exports. Event markers and manual video alignment retain
+  their existing behavior. No video files are added to Git.
+- The detailed analyser now selects windows by dragging plots and can replay/loop
+  its selected window. Both viewers render connected, peak-preserving traces and
+  cache signal backgrounds separately from cursor overlays. Raw data is unchanged.
+- Added dependency-free graph-core checks for pointer-anchored zoom, bounded pan,
+  reversed selection, stop/wrap boundaries, ordered extrema and line breaks across
+  gaps/non-finite values, plus dense-data reduction without losing peaks.
+- Verification: 28 Python tests and six JavaScript suites pass. Browser checks
+  covered the 419,670-row session, video/IMU replay and looping within 9–10 s,
+  stopping at 10 s with looping off, chart dragging, keyboard zoom/pan, zone
+  persistence after reload and alignment JSON zone export. The detailed analyser
+  was checked with 84,281 rows, drag selection and window looping/stopping.

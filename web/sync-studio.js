@@ -20,6 +20,7 @@ function cameraTime(c,t=time){return t*c.scale+c.offset;}
 function covered(c,t=time){return c.enabled&&c.ready&&!c.failed&&cameraTime(c,t)>=0&&cameraTime(c,t)<c.video.duration;}
 function seek(t){
  pause();time=Math.max(0,Math.min(range.end,t));
+ if(typeof onGraphSeek==='function')onGraphSeek(time);
  for(const c of cameras)c.previewing=false;for(const c of usable()){const target=Math.max(0,Math.min(c.video.duration,cameraTime(c)));if(Math.abs(c.video.currentTime-target)>.0001)c.video.currentTime=target;}
  render();
 }
@@ -32,7 +33,8 @@ function settle(video){return new Promise((resolve,reject)=>{
 });}
 async function play(){
  if(playing||starting){pause();return;}if($('play').disabled)return;
- if(time>=range.end-.001)seek(0);
+ const bounds=typeof reviewPlaybackBounds==='function'?reviewPlaybackBounds():range;
+ if(time>=bounds.end-.000001||time<bounds.start)seek(bounds.start);
  const token=++generation;starting=true;$('play').textContent='Loading…';
  try{
   for(const c of cameras)c.previewing=false;const active=usable().filter(c=>covered(c));
@@ -50,7 +52,8 @@ function tick(now){
  const master=usable().find(c=>covered(c)&&!c.video.paused&&!c.video.seeking);
  if(master){time=(master.video.currentTime-master.offset)/master.scale;clockTime=time;clockOrigin=now;}
  else time=clockTime+(now-clockOrigin)/1000*Number($('speed').value);
- if(time>=range.end){seek(range.end);return;}
+ const bounds=typeof reviewPlaybackBounds==='function'?reviewPlaybackBounds():range;
+ if(time>=bounds.end){const next=GraphCore.advance(time,bounds,typeof isZoneLooping==='function'&&isZoneLooping());seek(next.time);if(next.looped)play();return;}
  for(const c of usable()){
   if(!covered(c)){if(!c.video.paused)c.video.pause();continue;}
   const target=cameraTime(c),drift=target-c.video.currentTime,base=Number($('speed').value)*c.scale;
@@ -101,27 +104,7 @@ function render(){
  if(imu){const i=C.nearest(imu.times,time);const delta=Math.abs(imu.times[i]-time);if(delta>.02){for(let j=0;j<6;j++)$('v'+j).textContent='—';$('sampleIndex').textContent='GAP';$('sampleTime').textContent='No IMU sample within 20 ms of this time.';}else{imu.values[i].forEach((v,j)=>$('v'+j).textContent=v.toFixed(3));$('sampleIndex').textContent='#'+i.toLocaleString();$('sampleTime').textContent=`Sample ${imu.times[i].toFixed(6)} s · Δ ${((imu.times[i]-time)*1000).toFixed(2)} ms`;}}
  draw($('acc'),0);draw($('gyro'),3);renderTracks();renderAnnotations();
 }
-function draw(canvas,axis){
- const rect=canvas.getBoundingClientRect(),dpr=devicePixelRatio||1,w=rect.width,h=rect.height;if(!w)return;
- if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
- const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.font='10px ui-monospace,monospace';
- if(!imu){ctx.fillStyle='#96a3b0';ctx.fillText('Load an IMU CSV to see sensor readings here.',16,h/2);return;}
- const span=Number($('window').value);viewStart=Math.max(0,Math.min(Math.max(0,imu.duration-span),time-span/2));const end=viewStart+span;
- const lo=C.lowerBound(imu.times,viewStart),hi=C.lowerBound(imu.times,end);let min=Infinity,max=-Infinity;
- for(let i=lo;i<hi;i++)for(let a=axis;a<axis+3;a++){min=Math.min(min,imu.values[i][a]);max=Math.max(max,imu.values[i][a]);}
- if(!Number.isFinite(min)){min=-1;max=1;}const pad=(max-min)*.1||1;min-=pad;max+=pad;
- const left=55,right=w-8,top=14,bottom=h-25,px=t=>left+(t-viewStart)/span*(right-left),py=v=>bottom-(v-min)/(max-min)*(bottom-top);
- ctx.strokeStyle='#27313a';ctx.fillStyle='#96a3b0';for(let n=0;n<4;n++){const y=top+n*(bottom-top)/3;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();ctx.fillText((max-n*(max-min)/3).toFixed(1),2,y+3);}
- const ticks=Math.max(1,Math.min(4,Math.floor((right-left)/75)));for(let n=0;n<=ticks;n++){ctx.textAlign=n===0?'left':n===ticks?'right':'center';ctx.fillText((viewStart+span*n/ticks).toFixed(2)+'s',left+(right-left)*n/ticks,h-5);}ctx.textAlign='left';
- const count=Math.max(1,Math.floor(right-left));
- for(let a=0;a<3;a++){
-  ctx.strokeStyle=['#78b6ff','#b7f56b','#f49caf'][a];ctx.lineWidth=1;ctx.beginPath();let i=lo;
-  for(let p=0;p<count&&i<hi;p++){const until=viewStart+span*(p+1)/count;let low=Infinity,high=-Infinity,first=i;while(i<hi&&imu.times[i]<until){const v=imu.values[i][axis+a];low=Math.min(low,v);high=Math.max(high,v);i++;}if(i>first){const x=left+p;if(i-first===1){if(first===lo||imu.times[first]-imu.times[first-1]>Math.max(.02,5/imu.localHz))ctx.moveTo(x,py(low));else ctx.lineTo(x,py(low));}else{ctx.moveTo(x,py(low));ctx.lineTo(x,py(high));}}}
-  ctx.stroke();
- }
- ctx.save();ctx.setLineDash([3,3]);for(const r of annotationState().resolved){if(r.time_s<viewStart||r.time_s>end)continue;ctx.strokeStyle={swing:'#b7f56b','not-swing':'#f49caf',uncertain:'#ffc180',sync:'#78b6ff'}[r.marker.kind];ctx.beginPath();ctx.moveTo(px(r.time_s),top);ctx.lineTo(px(r.time_s),bottom);ctx.stroke();}ctx.restore();
- if(time>=viewStart&&time<=end){ctx.strokeStyle='#ffffff';ctx.beginPath();ctx.moveTo(px(time),top);ctx.lineTo(px(time),bottom);ctx.stroke();}
-}
+function draw(canvas,axis){if(typeof drawReviewGraph==='function')drawReviewGraph(canvas,axis);}
 function trackDomain(){
  if(trackDrag)return trackDrag.domain;
  const span=Number($('trackZoom').value);
@@ -162,6 +145,7 @@ function switchSession(session){
  for(const c of cameras){const state=session.cameras[c.key]||{offset:0,scale:1,enabled:true,anchors:[],alignmentMode:"none"};Object.assign(c,state);c.el.querySelector('.offset').value=c.offset.toFixed(6);c.el.querySelector('.ppm').value=((c.scale-1)*1e6).toFixed(3);c.el.querySelector('.included').checked=c.enabled;}
  $('sessions').replaceChildren(...sessions.map((s,i)=>new Option(s.name,String(i))));$('sessions').value=String(sessions.indexOf(session));
  $('imuName').textContent=imuFile;$('imuStats').textContent=`${imu.times.length.toLocaleString()} rows · ${imu.localHz.toFixed(1)} Hz local · ${imu.hz.toFixed(1)} rows/s overall · ${imu.duration.toFixed(3)} s`;
+ if(typeof resetGraphWorkspace==='function')resetGraphWorkspace(session);
  $('signal').disabled=!imu.rawValues;setSignal();recalc();if(typeof refreshLibrary==='function')refreshLibrary();
 }
 function setSignal(){if(!imu)return;imu.values=$('signal').value==='raw'&&imu.rawValues?imu.rawValues:imu.processedValues;render();}
@@ -203,6 +187,5 @@ $('reviewPlacement').onclick=()=>{
 $('samples').onclick=()=>{for(const name of ['IMG_3302.MOV','IMG_3303.MOV','IMG_3304.MOV'])if(!cameras.some(c=>c.src==='samples/videos/'+name))addVideo(name,'samples/videos/'+name);};
 function stepFrame(direction){const c=usable().find(c=>covered(c));if(c?.frameTimes){const target=C.frameStep(c.frameTimes,cameraTime(c),direction);seek((target-c.offset)/c.scale);}else{seek(time+direction/fps()/(c?.scale||1));message('Frame step uses configured fps here; no audited video frame timestamps at this time.');}}
 $('play').onclick=play;$('prev').onclick=()=>stepFrame(-1);$('next').onclick=()=>stepFrame(1);$('timeline').oninput=e=>seek(Number(e.target.value));$('speed').onchange=()=>{if(playing){clockTime=time;clockOrigin=performance.now();}for(const c of usable())c.video.playbackRate=Number($('speed').value)*c.scale;};$('window').onchange=render;
-for(const id of ['acc','gyro'])$(id).onclick=e=>{if(!imu)return;const r=e.currentTarget.getBoundingClientRect();seek(viewStart+Math.max(0,Math.min(1,(e.clientX-r.left-55)/(r.width-63)))*Number($('window').value));};
-$('export').onclick=()=>{saveSession();const data={version:3,formula:'video_seconds = session_seconds * scale + offset_seconds',videoFrameRate:fps(),sessions:sessions.map(s=>({name:s.name,mapping:s.mapping,markers:s.markers||[],videos:cameras.map(c=>({name:c.name,...(s.cameras[c.key]||{offset:0,scale:1,enabled:true,anchors:[]})}))})),activeSession:imuFile,overlap:range};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='vector-alignment.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('export').onclick=()=>{saveSession();const data={version:3,formula:'video_seconds = session_seconds * scale + offset_seconds',videoFrameRate:fps(),sessions:sessions.map(s=>({name:s.name,mapping:s.mapping,markers:s.markers||[],replayZones:typeof zoneStorage==='object'?(s===activeSession?savedZones:zoneStorage?.[s.annotationKey]||[]):[],videos:cameras.map(c=>({name:c.name,...(s.cameras[c.key]||{offset:0,scale:1,enabled:true,anchors:[]})}))})),activeSession:imuFile,overlap:range};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='vector-alignment.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 new ResizeObserver(render).observe($('acc').parentElement);document.addEventListener('visibilitychange',()=>{if(document.hidden&&(playing||starting)){pause();message('Paused while the tab is hidden.');}});render();
