@@ -221,3 +221,27 @@ retested during this web-viewer work.
   stopping at 10 s with looping off, chart dragging, keyboard zoom/pan, zone
   persistence after reload and alignment JSON zone export. The detailed analyser
   was checked with 84,281 rows, drag selection and window looping/stopping.
+
+## Experimental badminton mode
+
+- Researched wrist/racket badminton sensing before coding. Source links, method,
+  assumptions and validation plan are in docs/BADMINTON-ANALYSIS.md.
+- Added explicit Badminton mode, whole-recording/replay-zone analysis, worker-based
+  acceleration-change + rotation candidates and plot overlays. Original CSVs and
+  manual alignment are preserved. The 254.526 s example produces a nearby proposal
+  at 254.532 s; contact accuracy has not been established.
+- Added provisional hit count, separate human-confirmed contacts, review backlog,
+  rate/spacing and measured wrist peaks. Weak/medium/strong are within-analysis
+  wrist-motion bands, not force or shuttle speed; near-limit events stay unrated.
+- Added per-event video replay and confirm/reject/uncertain review, manual missed
+  contacts, browser persistence and CSV/JSON exports with provenance/settings.
+- Defaults propose 68 events in the 419,670-row sample; 21 are near-limit. This is
+  an unlabelled detector output, not a verified hit total. No video, recordings or
+  generated analysis artifacts were added to commits for this feature.
+- Verification: 28 Python tests and nine JavaScript suites pass, including sports
+  detection/negative fixtures, recoverable worker errors, CSV escaping/UTC
+  provenance and storage restoration. Browser checks covered the 419,670-row
+  session, confirm/reject count updates, a one-candidate selected zone at 254.532 s,
+  duplicate-add prevention and synchronized event replay. Test review changes
+  were returned to pending; no contacts were asserted as ground truth. Browser
+  console showed no errors. The screenshot remains local under .cache.

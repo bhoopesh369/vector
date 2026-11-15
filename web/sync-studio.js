@@ -145,7 +145,7 @@ function switchSession(session){
  for(const c of cameras){const state=session.cameras[c.key]||{offset:0,scale:1,enabled:true,anchors:[],alignmentMode:"none"};Object.assign(c,state);c.el.querySelector('.offset').value=c.offset.toFixed(6);c.el.querySelector('.ppm').value=((c.scale-1)*1e6).toFixed(3);c.el.querySelector('.included').checked=c.enabled;}
  $('sessions').replaceChildren(...sessions.map((s,i)=>new Option(s.name,String(i))));$('sessions').value=String(sessions.indexOf(session));
  $('imuName').textContent=imuFile;$('imuStats').textContent=`${imu.times.length.toLocaleString()} rows · ${imu.localHz.toFixed(1)} Hz local · ${imu.hz.toFixed(1)} rows/s overall · ${imu.duration.toFixed(3)} s`;
- if(typeof resetGraphWorkspace==='function')resetGraphWorkspace(session);
+ if(typeof resetGraphWorkspace==='function')resetGraphWorkspace(session);if(typeof onSportsSession==='function')onSportsSession(session);
  $('signal').disabled=!imu.rawValues;setSignal();recalc();if(typeof refreshLibrary==='function')refreshLibrary();
 }
 function setSignal(){if(!imu)return;imu.values=$('signal').value==='raw'&&imu.rawValues?imu.rawValues:imu.processedValues;render();}
@@ -158,6 +158,7 @@ function registerSession(name,data,map,sourceCSV){
  if(rawAxes.every(i=>i>=0))data.rawValues=C.buildIMU(sourceCSV,map.timestampColumn,map.timestampUnits,rawAxes,Number($('hz').value)).values;
  data.originUs=map.timestampColumn>=0?Number(sourceCSV.rows[0][map.timestampColumn])*({s:1e6,ms:1e3,us:1,ns:.001}[map.timestampUnits]):null;
  const sequenceColumn=sourceCSV.headers.indexOf('seq');data.sequences=sequenceColumn>=0?sourceCSV.rows.map(row=>row[sequenceColumn]):null;
+ const clippedColumn=sourceCSV.headers.indexOf('clipped');data.clippedFlags=clippedColumn<0?null:Uint8Array.from(sourceCSV.rows,r=>Number(r[clippedColumn])?1:0);
  const session={name,data,mapping:map,time:0,cameras:{}};initializeAnnotations(session);sessions.push(session);switchSession(session);
 }
 function apply(){try{const map={timestampColumn:Number($('map-time').value),timestampUnits:$('units').value,axes:axes.map(a=>Number($('map-'+a).value)),headers:csv.headers};const data=C.buildIMU(csv,map.timestampColumn,map.timestampUnits,map.axes,Number($('hz').value));registerSession(pendingName,data,map,csv);$('mapping').classList.remove('visible');message('Watch session added. Select a session and align its cameras.');}catch(e){message(e.message);}}

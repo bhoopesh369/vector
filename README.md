@@ -405,3 +405,23 @@ filter. Low-pass filtering remains an explicit analyser action.
 
 Run `node tests/test-graph-core.cjs` for zoom, bounded panning, replay boundaries,
 peak preservation, gap disconnection and unchanged-data checks.
+
+## Badminton sports analysis
+
+Open Sync Studio, load a CSV/video session, and use **Sports analysis ↓** →
+**Sport: Badminton · experimental**. The mode proposes hit candidates, overlays
+those events on both plots and reports estimated/confirmed counts, review backlog,
+relative weak/medium/strong wrist-motion totals, rate, spacing and measured peaks.
+Select the whole recording or the current replay zone; change thresholds in
+**Detection sensitivity and method** and click **Reanalyse badminton**.
+
+Use **▶ Review** beside a candidate to replay it against video. Confirm shuttle
+contacts, reject empty swings/other motion, and add verified missed hits at the
+playhead. Decisions persist per recording; export CSV/JSON for backup and future
+algorithm validation. Estimated hits include unreviewed candidates. Relative
+strength uses wrist gyro RMS bands; clipped events stay unrated. These are not
+shuttle force/speed or stroke-quality measurements.
+
+The method was researched before implementation. See
+[the design, sources and validation limits](docs/BADMINTON-ANALYSIS.md). The
+prototype is a transparent heuristic; it does not inherit published model accuracy.

@@ -9,5 +9,6 @@ onmessage=async({data:request})=>{try{
  const seq=csv.headers.indexOf('seq');data.sequences=seq<0?null:Float64Array.from(csv.rows,r=>Number(r[seq]));
  const raw=['ax_g','ay_g','az_g','gx_dps','gy_dps','gz_dps'].map(a=>csv.headers.indexOf('raw_'+a));
  if(raw.every(i=>i>=0))data.rawValues=SyncCore.buildIMU(csv,map.timestampColumn,'us',raw,1200).values;
+ const clip=csv.headers.indexOf('clipped');data.clippedFlags=clip<0?null:Uint8Array.from(csv.rows,r=>Number(r[clip])?1:0);
  data.segments=[{name:request.name,start:0,end:data.duration}];postMessage({data,map});
 }catch(error){postMessage({error:error.message});}};

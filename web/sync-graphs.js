@@ -42,6 +42,7 @@ function drawReviewGraph(canvas,axis){
  }else ctx.drawImage(layer.canvas,0,0,w,h);
  ctx.save();ctx.beginPath();ctx.rect(left,top,right-left,bottom-top);ctx.clip();
  if(graphSelection){ctx.fillStyle='#b7f56b20';ctx.fillRect(px(graphSelection.start),top,px(graphSelection.end)-px(graphSelection.start),bottom-top);ctx.strokeStyle='#b7f56b';for(const t of [graphSelection.start,graphSelection.end]){ctx.beginPath();ctx.moveTo(px(t),top);ctx.lineTo(px(t),bottom);ctx.stroke();}}
+ if(typeof drawSportsOverlay==='function')drawSportsOverlay(ctx,{start:view.start,end:view.end,left,right,top,bottom,px});
  ctx.setLineDash([3,3]);for(const r of annotationState().resolved){if(r.time_s<view.start||r.time_s>view.end)continue;ctx.strokeStyle={swing:'#b7f56b','not-swing':'#f49caf',uncertain:'#ffc180',sync:'#78b6ff'}[r.marker.kind];ctx.beginPath();ctx.moveTo(px(r.time_s),top);ctx.lineTo(px(r.time_s),bottom);ctx.stroke();}
  if(graphHover!==null){ctx.strokeStyle='#a1c6e0';ctx.beginPath();ctx.moveTo(px(graphHover),top);ctx.lineTo(px(graphHover),bottom);ctx.stroke();}ctx.setLineDash([]);if(time>=view.start&&time<=view.end){ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(px(time),top);ctx.lineTo(px(time),bottom);ctx.stroke();}ctx.restore();if(axis===3)drawGraphOverview();
 }
