@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """Stage the pinned factory project and the tracked Vector overlay locally."""
 from pathlib import Path
+import re
 import shutil
 ROOT=Path(__file__).resolve().parents[1]
 source=ROOT/'.vendor/waveshare/examples/factory'
 target=ROOT/'.cache/watch-project'
 shutil.copytree(source,target,dirs_exist_ok=True)
 lock=ROOT/'firmware/watch/dependencies.lock'
-if lock.exists():shutil.copy2(lock,target/'dependencies.lock')
+if lock.exists():
+    # The component manager records absolute local paths in the lockfile.
+    # Rebase those paths to the staged project while retaining pinned versions.
+    staged_lock=re.sub(
+        r"(?m)^(      path: ).*/\.cache/watch-project/(components/[^\r\n]+)$",
+        lambda match: match[1]+str(target/match[2]),
+        lock.read_text(),
+    )
+    (target/'dependencies.lock').write_text(staged_lock)
 shutil.copytree(ROOT/'firmware/watch/components/MotionRecorder',target/'components/MotionRecorder',dirs_exist_ok=True)
 def replace(path,old,new):
     text=path.read_text()
